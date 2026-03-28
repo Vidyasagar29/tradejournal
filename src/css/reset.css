@@ -1,0 +1,52 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overscroll-behavior: none;
+  font-family: "IBM Plex Sans", sans-serif;
+  color: var(--text-primary);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at top right, rgba(255, 157, 30, 0.14), transparent 24%),
+    radial-gradient(circle at top left, rgba(39, 193, 184, 0.12), transparent 20%),
+    linear-gradient(180deg, #08101a 0%, var(--bg-canvas) 100%);
+  background-size: 24px 24px, 24px 24px, auto, auto, auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  color-scheme: dark;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

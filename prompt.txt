@@ -1,0 +1,58 @@
+Follow CODEX_AGENT.md.
+
+Read PROJECT_SPEC.md, ARCHITECTURE.md, TASKS.md.
+
+Implement the next task safely without breaking existing code.
+
+
+
+Build Feature Prompt (Most Used)--------------------------------
+Follow CODEX_AGENT.md instructions.
+
+Read these files first:
+PROJECT_SPEC.md
+ARCHITECTURE.md
+TASKS.md
+
+Understand the system architecture and existing modules.
+
+Implement the next task from TASKS.md.
+
+Maintain modular JavaScript structure and do not break existing functionality.
+
+Ensure compatibility with:
+- Supabase
+- Chart.js
+- GitHub Pages
+
+improve or refactor---------------------------------------
+
+Follow CODEX_AGENT.md.
+
+Read:
+PROJECT_SPEC.md
+ARCHITECTURE.md
+CHANGELOG.md
+
+Review the current implementation and improve code quality.
+
+Focus on:
+- modularity
+- readability
+- performance
+- maintainability
+
+Do not change functionality or break existing features.
+
+Debug----------------------------------------------
+
+
+Follow CODEX_AGENT.md.
+
+Read:
+PROJECT_SPEC.md
+ARCHITECTURE.md
+BUGS.md
+
+Investigate the issue and fix it without breaking other modules.
+Explain the cause and update the code safely.

@@ -1,0 +1,319 @@
+.open-positions-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  justify-items: start;
+}
+
+.open-positions-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  width: min(980px, 100%);
+  justify-items: start;
+}
+
+.positions-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: min(980px, 100%);
+}
+
+.positions-stat-card {
+  padding: 7px 9px;
+  gap: 4px;
+}
+
+.positions-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.positions-table-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 170px);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(9, 15, 24, 0.88);
+  width: min(980px, 100%);
+}
+
+.positions-table {
+  width: auto;
+  border-collapse: collapse;
+  min-width: 780px;
+}
+
+.positions-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-table-head);
+}
+
+.positions-table th,
+.positions-table td {
+  padding: 6px 7px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.positions-table th {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.positions-table td {
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.positions-table td strong {
+  font-size: 0.78rem;
+}
+
+.positions-strategy-row td,
+.positions-instrument-row td {
+  padding: 6px 7px;
+  border-bottom: 1px solid var(--border-soft);
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+}
+
+.positions-strategy-row td {
+  background: rgba(16, 25, 37, 0.98);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.positions-instrument-row td {
+  background: rgba(12, 20, 30, 0.95);
+  color: var(--text-secondary);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.positions-side-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.positions-side-badge.is-long {
+  background: rgba(71, 209, 140, 0.14);
+  color: var(--positive);
+}
+
+.positions-side-badge.is-short {
+  background: rgba(255, 107, 91, 0.14);
+  color: var(--negative);
+}
+
+.positions-pnl-positive {
+  color: var(--positive);
+  font-weight: 700;
+}
+
+.positions-pnl-negative {
+  color: var(--negative);
+  font-weight: 700;
+}
+
+.positions-empty {
+  padding: 18px 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.positions-action-select {
+  min-width: 106px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+}
+
+.positions-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 12px;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(10px);
+}
+
+.positions-modal-overlay.is-hidden {
+  display: none;
+}
+
+.positions-modal {
+  width: min(520px, 100%);
+  max-height: min(62vh, 520px);
+  overflow: auto;
+  margin-top: 6vh;
+  padding: 12px;
+}
+
+.positions-modal-body,
+.positions-detail-card,
+.positions-squareoff-card,
+.positions-delete-card {
+  display: grid;
+  gap: 8px;
+}
+
+.positions-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.positions-modal-header h3,
+.positions-detail-head h3,
+.positions-detail-head p,
+.positions-delete-card p {
+  margin: 0;
+}
+
+.positions-modal-header h3,
+.positions-detail-head h3 {
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.positions-modal-close {
+  padding: 5px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.positions-detail-head p,
+.positions-delete-card p {
+  color: var(--text-secondary);
+  line-height: 1.25;
+  font-size: 0.8rem;
+}
+
+.positions-inline-meta,
+.positions-squareoff-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.positions-inline-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.positions-inline-meta span {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(16, 25, 37, 0.96);
+}
+
+.positions-inline-meta strong {
+  color: var(--text-primary);
+}
+
+.positions-squareoff-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.positions-squareoff-card form {
+  display: grid;
+  gap: 8px;
+}
+
+.positions-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.positions-delete-warning {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 107, 91, 0.12);
+  color: var(--negative);
+  line-height: 1.3;
+  font-size: 0.8rem;
+}
+
+.positions-notes-field textarea {
+  min-height: 58px;
+}
+
+.positions-modal .trade-field {
+  gap: 3px;
+}
+
+.positions-modal .trade-label {
+  font-size: 0.74rem;
+}
+
+.positions-modal .trade-field input,
+.positions-modal .trade-field select,
+.positions-modal .trade-field textarea {
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
+.positions-modal .button-primary,
+.positions-modal .button-secondary {
+  padding: 8px 11px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .positions-summary-grid,
+  .positions-inline-meta,
+  .positions-squareoff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .positions-table-wrap {
+    max-height: calc(100vh - 150px);
+  }
+}
+
+@media (max-width: 720px) {
+  .open-positions-card,
+  .positions-modal {
+    padding: 10px;
+  }
+
+  .positions-modal-overlay {
+    padding: 12px;
+  }
+}

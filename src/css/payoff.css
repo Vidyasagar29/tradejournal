@@ -1,0 +1,205 @@
+.payoff-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.payoff-card {
+  display: grid;
+  gap: 5px;
+  padding: 6px;
+}
+
+.payoff-selector-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+}
+
+.payoff-select {
+  min-width: 180px;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.7rem;
+}
+
+.payoff-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.payoff-control {
+  display: grid;
+  gap: 3px;
+}
+
+.payoff-control-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.payoff-control-label {
+  color: var(--text-secondary);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.payoff-control-value {
+  font-size: 0.68rem;
+}
+
+.payoff-step-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.payoff-step-button {
+  min-width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payoff-step-button:hover {
+  background: rgba(255, 157, 30, 0.12);
+}
+
+.payoff-range {
+  width: 100%;
+}
+
+.payoff-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.payoff-stat-card {
+  padding: 4px 6px;
+  gap: 2px;
+}
+
+.payoff-content {
+  display: grid;
+  gap: 5px;
+}
+
+.payoff-section {
+  display: grid;
+  gap: 5px;
+}
+
+.payoff-meta-card,
+.payoff-group-card {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+}
+
+.payoff-meta-card strong,
+.payoff-meta-card span,
+.payoff-group-card h3,
+.payoff-group-card p {
+  margin: 0;
+}
+
+.payoff-meta-card span,
+.payoff-group-card p {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.payoff-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  font-size: 0.64rem;
+  color: var(--text-secondary);
+}
+
+.payoff-metric-strip span {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(16, 25, 37, 0.96);
+}
+
+.payoff-chart-frame {
+  position: relative;
+  min-height: 126px;
+  max-height: 126px;
+}
+
+.payoff-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(9, 15, 24, 0.88);
+}
+
+.payoff-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+.payoff-table th,
+.payoff-table td {
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+}
+
+.payoff-table th {
+  color: var(--text-secondary);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.payoff-table td {
+  color: var(--text-primary);
+  font-size: 0.68rem;
+}
+
+@media (max-width: 980px) {
+  .payoff-selector-row,
+  .payoff-controls,
+  .payoff-summary-grid,
+  .payoff-metric-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .payoff-card,
+  .payoff-meta-card,
+  .payoff-group-card {
+    padding: 7px;
+  }
+
+  .payoff-selector-row {
+    grid-template-columns: 1fr;
+  }
+
+  .payoff-select {
+    width: 100%;
+  }
+}

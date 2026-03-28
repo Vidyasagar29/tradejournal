@@ -1,0 +1,134 @@
+.trade-entry-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.trade-entry-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.trade-entry-form {
+  display: grid;
+  gap: 8px;
+}
+
+.trade-form-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+
+.trade-field {
+  display: grid;
+  gap: 4px;
+}
+
+.trade-field-full {
+  grid-column: 1 / -1;
+}
+
+.trade-label {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.trade-field input,
+.trade-field select,
+.trade-field textarea {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.trade-field input:focus,
+.trade-field select:focus,
+.trade-field textarea:focus {
+  outline: none;
+  border-color: rgba(255, 157, 30, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 157, 30, 0.12);
+}
+
+.trade-field input:read-only {
+  background: rgba(20, 31, 45, 0.96);
+}
+
+.trade-field input:disabled,
+.trade-field select:disabled {
+  background: rgba(16, 25, 37, 0.86);
+  color: var(--text-muted);
+}
+
+.trade-field textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.trade-helper {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.trade-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trade-entry-card .section-header {
+  gap: 8px;
+}
+
+.trade-entry-card .section-header h2 {
+  font-size: 1.04rem;
+}
+
+.trade-entry-card .trade-status-banner {
+  padding: 7px 9px;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1180px) {
+  .trade-form-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .trade-form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .trade-entry-card {
+    padding: 10px;
+  }
+
+  .trade-helper {
+    display: none;
+  }
+
+  .trade-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .trade-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

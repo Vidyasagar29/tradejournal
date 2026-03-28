@@ -1,0 +1,31 @@
+:root {
+  --bg-canvas: #060a10;
+  --bg-app: rgba(7, 12, 18, 0.94);
+  --bg-panel: rgba(15, 22, 33, 0.94);
+  --bg-panel-strong: #0f1722;
+  --bg-panel-elevated: #131d2b;
+  --bg-accent: linear-gradient(180deg, #101821 0%, #091018 100%);
+  --bg-highlight: linear-gradient(135deg, rgba(255, 157, 30, 0.14), rgba(39, 193, 184, 0.08));
+  --bg-input: rgba(9, 15, 24, 0.96);
+  --bg-table-head: rgba(18, 27, 39, 0.98);
+  --bg-overlay: rgba(2, 6, 11, 0.74);
+  --border-soft: rgba(91, 118, 148, 0.34);
+  --border-strong: rgba(255, 157, 30, 0.44);
+  --text-primary: #d8e4ef;
+  --text-secondary: #8ea2b6;
+  --text-muted: #6d8196;
+  --text-on-accent: #f5f8fb;
+  --accent: #ff9d1e;
+  --accent-2: #27c1b8;
+  --accent-3: #5a7cff;
+  --positive: #47d18c;
+  --negative: #ff6b5b;
+  --shadow-lg: 0 18px 56px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.24);
+  --radius-xl: 12px;
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+  --sidebar-width: 232px;
+  --content-max: 100vw;
+}

@@ -1,0 +1,219 @@
+.risk-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.risk-card {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.risk-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.risk-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.risk-toggle-note {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  margin-right: 2px;
+}
+
+.risk-toggle-button {
+  padding: 5px 8px;
+  font-size: 0.68rem;
+}
+
+.risk-toggle-button.is-active {
+  background: rgba(255, 157, 30, 0.14);
+  color: var(--accent);
+  border-color: rgba(255, 157, 30, 0.3);
+}
+
+.risk-stat-card {
+  padding: 5px 7px;
+  gap: 2px;
+}
+
+.risk-grid,
+.exposure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.exposure-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.risk-chart-card,
+.risk-list-card,
+.risk-table-card,
+.exposure-card {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+}
+
+.risk-chart-card h3,
+.risk-list-card h3,
+.risk-table-card h3,
+.exposure-card h3 {
+  margin: 0;
+}
+
+.risk-chart-frame {
+  position: relative;
+  min-height: 132px;
+  max-height: 132px;
+}
+
+.risk-symbol-list,
+.exposure-list {
+  display: grid;
+  gap: 4px;
+}
+
+.risk-symbol-row,
+.exposure-row {
+  display: grid;
+  gap: 4px;
+  padding: 5px 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(11, 18, 27, 0.9);
+}
+
+.risk-symbol-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.risk-symbol-row div,
+.exposure-meta,
+.exposure-stats {
+  display: grid;
+  gap: 2px;
+}
+
+.risk-symbol-row strong,
+.exposure-meta strong,
+.exposure-stats strong {
+  font-size: 0.74rem;
+}
+
+.risk-symbol-row span,
+.exposure-meta span,
+.exposure-stats span,
+.risk-iv-source {
+  color: var(--text-secondary);
+  font-size: 0.64rem;
+}
+
+.risk-table-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 214px);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(9, 15, 24, 0.88);
+}
+
+.risk-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+}
+
+.risk-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-table-head);
+}
+
+.risk-table th,
+.risk-table td {
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.risk-table th {
+  color: var(--text-secondary);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.risk-table td {
+  color: var(--text-primary);
+  font-size: 0.68rem;
+  line-height: 1.15;
+}
+
+.risk-positive {
+  color: var(--positive);
+  font-weight: 700;
+}
+
+.risk-negative {
+  color: var(--negative);
+  font-weight: 700;
+}
+
+.exposure-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(22, 34, 48, 0.96);
+  overflow: hidden;
+}
+
+.exposure-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+}
+
+@media (max-width: 1100px) {
+  .exposure-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .risk-summary-grid,
+  .risk-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .risk-table-wrap {
+    max-height: calc(100vh - 220px);
+  }
+}
+
+@media (max-width: 720px) {
+  .risk-card,
+  .risk-chart-card,
+  .risk-list-card,
+  .risk-table-card,
+  .exposure-card {
+    padding: 8px;
+  }
+
+  .risk-symbol-row {
+    grid-template-columns: 1fr;
+  }
+}
