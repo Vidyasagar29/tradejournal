@@ -41,6 +41,7 @@ export const marketDataService = {
   },
   resolveInputs(position, context) {
     const marketRow = matchMarketRow(position, context.marketData);
+    const sheetOptionIv = resolveSheetOptionIv(position, context.currentPriceIvs);
     const defaultIv = resolveSymbolDefaultIv(position, context.defaultIvRows) ?? context.defaultIv ?? DEFAULT_IV;
     const marketIv = pickFirstNumber([
       marketRow?.iv,
@@ -49,9 +50,11 @@ export const marketDataService = {
       marketRow?.default_iv
     ]);
     const entryIv = pickFirstNumber([position.entryIv]);
-    const ivValue = pickFirstNumber([marketIv, defaultIv, entryIv, DEFAULT_IV]);
+    const ivValue = pickFirstNumber([marketIv, sheetOptionIv, defaultIv, entryIv, DEFAULT_IV]);
     const ivSource = marketIv != null
       ? "market_data"
+      : sheetOptionIv != null
+        ? "market_data_named"
       : defaultIv != null
         ? "default_iv"
         : entryIv != null
@@ -224,6 +227,16 @@ function buildSymbolSpotMap(rows) {
 
 function buildCurrentPriceIvMap() {
   return new Map(sheetCurrentPriceIvCache);
+}
+
+function resolveSheetOptionIv(position, currentPriceIvs) {
+  const optionType = normalizeValue(position.optionType);
+
+  if (!currentPriceIvs || (optionType !== "CE" && optionType !== "PE")) {
+    return null;
+  }
+
+  return pickFirstNumber([currentPriceIvs.get(optionType)]);
 }
 
 function normalizeValue(value) {
