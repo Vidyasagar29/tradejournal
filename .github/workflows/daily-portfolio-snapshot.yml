@@ -1,0 +1,27 @@
+name: Daily Portfolio Snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 10 * * 1-5"
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Save Daily MTM Snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MARKET_DATA_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTnIOO5bf63lwYdCX1ZsPa32o0AekCFfrOoXdq1jVH7j7JD8Jg5PjO7EtqF5ISTk2MZQIGDfXPR8MoJ/pub?gid=775524360&single=true&output=csv"
+          MARKET_CLOSE_UTC_HOUR: "10"
+          MARKET_CLOSE_UTC_MINUTE: "5"
+        run: node ./scripts/daily-portfolio-snapshot.mjs

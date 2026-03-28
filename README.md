@@ -20,3 +20,9 @@ Technology:
 * Google Sheets
 
 Development is guided by Codex Agent instructions.
+
+## Automation
+
+The repository includes a GitHub Actions workflow at `.github/workflows/daily-portfolio-snapshot.yml`.
+
+It runs on weekday schedule and can also be triggered manually to save an end-of-day open-position MTM snapshot into Supabase.
