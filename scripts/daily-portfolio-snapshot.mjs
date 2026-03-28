@@ -8,7 +8,8 @@ const PORTFOLIO_COLUMN_CANDIDATES = {
   capital: ["capital", "ending_capital", "balance", "equity"],
   realizedPnl: ["realized_pnl", "pnl", "daily_pnl", "profit_loss"],
   source: ["source", "origin"],
-  closedCount: ["closed_count", "trade_count", "closed_trades"]
+  closedCount: ["closed_count", "trade_count", "closed_trades"],
+  niftyClose: ["nifty_close", "benchmark_close", "nifty", "close"]
 };
 
 async function main() {
@@ -34,10 +35,12 @@ async function main() {
   const totalUnrealizedPnl = valuedOpenRows.reduce((total, row) => total + row.unrealizedPnl, 0);
   const latestRealizedCapital = resolveLatestRealizedCapital(portfolioRows, portfolioColumnMap);
   const snapshotDate = getTodayIsoDate();
+  const niftyClose = toNumeric(marketSheet.namedCells.get("NIFTY_50"));
   const snapshotPayload = mapPortfolioPayload({
     date: snapshotDate,
     capital: latestRealizedCapital + totalUnrealizedPnl,
     realizedPnl: totalUnrealizedPnl,
+    niftyClose,
     source: "trade_journal_mtm"
   }, portfolioColumnMap);
   const existingTodayRow = findExistingSnapshot(portfolioRows, portfolioColumnMap, snapshotDate, "trade_journal_mtm");
@@ -395,6 +398,10 @@ function mapPortfolioPayload(point, columnMap) {
 
   if (columnMap.closedCount) {
     payload[columnMap.closedCount] = 0;
+  }
+
+  if (columnMap.niftyClose) {
+    payload[columnMap.niftyClose] = point.niftyClose;
   }
 
   return payload;

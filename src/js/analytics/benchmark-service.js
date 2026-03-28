@@ -1,3 +1,6 @@
+import { portfolioRepository } from "../data/portfolio-repository.js";
+import { resolvePortfolioColumnMap } from "../data/portfolio-schema-service.js";
+
 export async function loadNiftyBenchmarkSnapshot(equityCurve) {
   const rows = await loadNiftyHistory();
   const normalizedRows = rows.filter((row) => row.date);
@@ -13,6 +16,12 @@ export async function loadNiftyBenchmarkSnapshot(equityCurve) {
 }
 
 async function loadNiftyHistory() {
+  const storedRows = await loadStoredNiftyHistory();
+
+  if (storedRows.length > 0) {
+    return storedRows;
+  }
+
   const csvUrl = window.TRADE_JOURNAL_CONFIG?.googleSheets?.benchmarkCsvUrl?.trim();
 
   if (!csvUrl) {
@@ -31,6 +40,28 @@ async function loadNiftyHistory() {
 
     const csvText = await response.text();
     return parseBenchmarkCsv(csvText);
+  } catch {
+    return [];
+  }
+}
+
+async function loadStoredNiftyHistory() {
+  try {
+    const columnMap = await resolvePortfolioColumnMap();
+
+    if (!columnMap.date || !columnMap.nifty_close) {
+      return [];
+    }
+
+    const rows = await portfolioRepository.listSnapshots();
+
+    return rows
+      .map((row) => ({
+        date: row[columnMap.date] || "",
+        close: Number(row[columnMap.nifty_close])
+      }))
+      .filter((row) => row.date && Number.isFinite(row.close) && row.close > 0)
+      .sort((left, right) => String(left.date).localeCompare(String(right.date)));
   } catch {
     return [];
   }

@@ -6,7 +6,8 @@ const PORTFOLIO_COLUMN_CANDIDATES = {
   capital: ["capital", "ending_capital", "balance", "equity"],
   realized_pnl: ["realized_pnl", "pnl", "daily_pnl", "profit_loss"],
   closed_count: ["closed_count", "trade_count", "closed_trades"],
-  source: ["source", "origin"]
+  source: ["source", "origin"],
+  nifty_close: ["nifty_close", "benchmark_close", "nifty", "close"]
 };
 
 let cachedPortfolioColumnMap = null;
