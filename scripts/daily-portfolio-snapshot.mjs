@@ -405,8 +405,8 @@ function isRealizedRow(row, columnMap) {
     return true;
   }
 
-  const source = String(row[columnMap.source] || "");
-  return source === "trade_journal" || source === "trade_journal_realized";
+  const source = String(row[columnMap.source] || "").trim();
+  return source === "" || source === "trade_journal" || source === "trade_journal_realized";
 }
 
 async function supabaseRequest(config, path, options = {}) {

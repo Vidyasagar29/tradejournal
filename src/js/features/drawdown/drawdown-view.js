@@ -201,16 +201,16 @@ function formatTrackingSource(source) {
 function buildDrawdownStatusMessage(snapshot) {
   const trackingSource = formatTrackingSource(snapshot.portfolioTracking?.source);
 
-  if (snapshot.tradeSummary.closedCount === 0 && snapshot.portfolioTracking?.endOfDayMtmApplied) {
-    return `Drawdown currently reflects today's end-of-day open-position mark-to-market on initial capital. Source: ${trackingSource}.`;
+  if (snapshot.portfolioTracking?.source === "portfolio_table" && snapshot.portfolioTracking?.mtmStored) {
+    return `Drawdown is using stored portfolio snapshots, including saved end-of-day MTM rows. Source: ${trackingSource}.`;
   }
 
   if (snapshot.tradeSummary.closedCount === 0) {
     return "No closed trades yet. Drawdown will appear once realized P&L exists.";
   }
 
-  if (snapshot.portfolioTracking?.endOfDayMtmApplied) {
-    return `Drawdown includes realized capital plus today's end-of-day open P&L. Source: ${trackingSource}.`;
+  if (snapshot.portfolioTracking?.source === "portfolio_table") {
+    return `Drawdown is using stored portfolio snapshots. Source: ${trackingSource}.`;
   }
 
   return `Drawdown is based on realized capital updates from ${snapshot.tradeSummary.closedCount} closed trade(s). Source: ${trackingSource}.`;

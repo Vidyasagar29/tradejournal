@@ -39,14 +39,8 @@ export async function summarizePortfolio() {
   const derivedEquityCurve = buildEquityCurveFromDailyPnlMap(derivedDailyPnlMap);
   const openPositionMarkToMarket = await buildOpenPositionMarkToMarket(trades, positions, strategyMap);
   const portfolioSync = await syncPortfolioSnapshots(derivedEquityCurve);
-  const mtmSync = await syncEndOfDayOpenPnlSnapshot(derivedEquityCurve, openPositionMarkToMarket);
-  const trackedEquityCurve = await loadTrackedEquityCurve();
-  const baseEquityCurve = trackedEquityCurve.length > 0 ? trackedEquityCurve : derivedEquityCurve;
-  const shouldUseTrackedCurveDirectly = trackedEquityCurve.length > 0
-    && (mtmSync.stored || !openPositionMarkToMarket.appliedToEquityCurve);
-  const equityCurve = shouldUseTrackedCurveDirectly
-    ? baseEquityCurve
-    : appendEndOfDayOpenPnlSnapshot(baseEquityCurve, openPositionMarkToMarket.totalUnrealizedPnl);
+  const trackedPortfolio = await loadTrackedPortfolio();
+  const equityCurve = trackedPortfolio.curve.length > 0 ? trackedPortfolio.curve : derivedEquityCurve;
 
   const tradeSummary = buildTradeSummary(closedTrades, equityCurve);
   const strategyPerformance = buildStrategyPerformance(closedTrades);
@@ -63,10 +57,10 @@ export async function summarizePortfolio() {
       drawdownPercent: point.drawdownPercent
     })),
     portfolioTracking: {
-      source: trackedEquityCurve.length > 0 ? "portfolio_table" : "derived",
+      source: trackedPortfolio.curve.length > 0 ? "portfolio_table" : "derived",
       syncStatus: portfolioSync.status,
-      endOfDayMtmApplied: mtmSync.applied || openPositionMarkToMarket.appliedToEquityCurve,
-      mtmStored: mtmSync.stored,
+      endOfDayMtmApplied: trackedPortfolio.hasStoredMtm,
+      mtmStored: trackedPortfolio.hasStoredMtm,
       openUnrealizedPnl: openPositionMarkToMarket.totalUnrealizedPnl
     },
     strategyPerformance,
@@ -214,78 +208,8 @@ async function buildOpenPositionMarkToMarket(trades, positions, strategyMap) {
 
   return {
     positions: pricedPositions,
-    totalUnrealizedPnl: pricedPositions.reduce((total, position) => total + Number(position.unrealizedPnl || 0), 0),
-    appliedToEquityCurve: shouldAppendEndOfDayOpenPnl() && pricedPositions.length > 0
+    totalUnrealizedPnl: pricedPositions.reduce((total, position) => total + Number(position.unrealizedPnl || 0), 0)
   };
-}
-
-function appendEndOfDayOpenPnlSnapshot(equityCurve, totalUnrealizedPnl) {
-  if (!shouldAppendEndOfDayOpenPnl()) {
-    return equityCurve;
-  }
-
-  const today = getTodayIsoDate();
-  const normalizedCurve = [...equityCurve];
-  const basePoint = normalizedCurve.length > 0
-    ? normalizedCurve.at(-1)
-    : {
-        date: today,
-        capital: INITIAL_CAPITAL,
-        dailyPnl: 0,
-        drawdownValue: 0,
-        drawdownPercent: 0
-      };
-  const mtmPoint = {
-    date: today,
-    capital: basePoint.capital + totalUnrealizedPnl,
-    dailyPnl: (basePoint.date === today ? basePoint.dailyPnl : 0) + totalUnrealizedPnl
-  };
-
-  if (normalizedCurve.length === 0) {
-    return buildEquityCurveFromDailyPnlMap(new Map([[today, mtmPoint.dailyPnl]]));
-  }
-
-  if (basePoint.date === today) {
-    normalizedCurve[normalizedCurve.length - 1] = mtmPoint;
-  } else {
-    normalizedCurve.push(mtmPoint);
-  }
-
-  return rebuildDrawdownCurve(normalizedCurve);
-}
-
-async function syncEndOfDayOpenPnlSnapshot(baseEquityCurve, openPositionMarkToMarket) {
-  if (!openPositionMarkToMarket.appliedToEquityCurve) {
-    return { applied: false, stored: false };
-  }
-
-  try {
-    const columnMap = await resolvePortfolioColumnMap();
-
-    if (!columnMap.date || !columnMap.capital || !columnMap.source) {
-      return { applied: true, stored: false };
-    }
-
-    const today = getTodayIsoDate();
-    const baseCapital = baseEquityCurve.length > 0 ? Number(baseEquityCurve.at(-1).capital || INITIAL_CAPITAL) : INITIAL_CAPITAL;
-    const todayRows = await portfolioRepository.findByDate(today);
-    const existingMtmRow = todayRows.find((row) => isMtmPortfolioRow(row, columnMap));
-    const payload = mapPortfolioPayload({
-      date: today,
-      capital: baseCapital + openPositionMarkToMarket.totalUnrealizedPnl,
-      dailyPnl: openPositionMarkToMarket.totalUnrealizedPnl
-    }, columnMap, "trade_journal_mtm");
-
-    if (existingMtmRow) {
-      await portfolioRepository.updateSnapshot(buildPortfolioMatcher(existingMtmRow, today, columnMap), payload);
-      return { applied: true, stored: true };
-    }
-
-    await portfolioRepository.createSnapshot(payload);
-    return { applied: true, stored: true };
-  } catch {
-    return { applied: true, stored: false };
-  }
 }
 
 function rebuildDrawdownCurve(points) {
@@ -351,20 +275,19 @@ async function prunePortfolioSnapshots(existingRows, equityCurve, columnMap) {
   }
 }
 
-async function loadTrackedEquityCurve() {
+async function loadTrackedPortfolio() {
   try {
     const columnMap = await resolvePortfolioColumnMap();
 
     if (!columnMap.date || !columnMap.capital) {
-      return [];
+      return { curve: [], hasStoredMtm: false };
     }
 
     const rows = await portfolioRepository.listSnapshots();
     const normalizedRows = normalizeTrackedPortfolioRows(rows, columnMap);
 
     let peakCapital = INITIAL_CAPITAL;
-
-    return normalizedRows.map((row) => {
+    const curve = normalizedRows.map((row) => {
       peakCapital = Math.max(peakCapital, row.capital);
       const drawdownValue = row.capital - peakCapital;
       const drawdownPercent = peakCapital > 0 ? (drawdownValue / peakCapital) * 100 : 0;
@@ -377,8 +300,11 @@ async function loadTrackedEquityCurve() {
         drawdownPercent
       };
     });
+    const hasStoredMtm = normalizedRows.some((row) => row.source === "trade_journal_mtm");
+
+    return { curve, hasStoredMtm };
   } catch {
-    return [];
+    return { curve: [], hasStoredMtm: false };
   }
 }
 
@@ -416,7 +342,8 @@ function isManagedPortfolioRow(row, columnMap) {
     return true;
   }
 
-  return String(row[columnMap.source] || "").startsWith("trade_journal");
+  const source = String(row[columnMap.source] || "").trim();
+  return source === "" || source.startsWith("trade_journal");
 }
 
 function isRealizedPortfolioRow(row, columnMap) {
@@ -424,8 +351,8 @@ function isRealizedPortfolioRow(row, columnMap) {
     return true;
   }
 
-  const source = String(row[columnMap.source] || "");
-  return source === "trade_journal" || source === "trade_journal_realized";
+  const source = String(row[columnMap.source] || "").trim();
+  return source === "" || source === "trade_journal" || source === "trade_journal_realized";
 }
 
 function isMtmPortfolioRow(row, columnMap) {
@@ -499,24 +426,6 @@ function buildStrategyPerformance(closedTrades) {
       };
     })
     .sort((left, right) => right.pnl - left.pnl || right.tradeCount - left.tradeCount || left.name.localeCompare(right.name));
-}
-
-function shouldAppendEndOfDayOpenPnl() {
-  const marketClose = window.TRADE_JOURNAL_CONFIG?.optionPricing?.marketCloseTime || {};
-  const closeHour = Number(marketClose.hour);
-  const closeMinute = Number(marketClose.minute);
-  const now = new Date();
-  const hour = Number.isFinite(closeHour) ? closeHour : 15;
-  const minute = Number.isFinite(closeMinute) ? closeMinute : 30;
-
-  return now.getHours() > hour || (now.getHours() === hour && now.getMinutes() >= minute);
-}
-
-function getTodayIsoDate() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 function buildExposureSnapshot(trades, positions, strategyMap) {

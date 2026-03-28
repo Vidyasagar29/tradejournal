@@ -316,16 +316,16 @@ function formatTrackingSource(source) {
 function buildEquityStatusMessage(snapshot) {
   const trackingSource = formatTrackingSource(snapshot.portfolioTracking?.source);
 
-  if (snapshot.tradeSummary.closedCount === 0 && snapshot.portfolioTracking?.endOfDayMtmApplied) {
-    return `Showing end-of-day open-position mark-to-market on top of initial capital. Source: ${trackingSource}.`;
+  if (snapshot.portfolioTracking?.source === "portfolio_table" && snapshot.portfolioTracking?.mtmStored) {
+    return `Equity curve is using stored portfolio snapshots, including saved end-of-day MTM rows. Source: ${trackingSource}.`;
   }
 
   if (snapshot.tradeSummary.closedCount === 0) {
     return "No closed trades yet. Equity curve will appear once positions are fully exited.";
   }
 
-  if (snapshot.portfolioTracking?.endOfDayMtmApplied) {
-    return `Built equity curve from ${snapshot.tradeSummary.closedCount} closed trade(s) and appended today's end-of-day open P&L. Source: ${trackingSource}.`;
+  if (snapshot.portfolioTracking?.source === "portfolio_table") {
+    return `Equity curve is using stored portfolio snapshots. Source: ${trackingSource}.`;
   }
 
   return `Built equity curve from ${snapshot.tradeSummary.closedCount} closed trade(s). Source: ${trackingSource}.`;
