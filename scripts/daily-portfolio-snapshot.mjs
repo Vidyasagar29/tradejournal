@@ -2,6 +2,8 @@ const INITIAL_CAPITAL = 1000000;
 const DEFAULT_IV = 18;
 const DEFAULT_MARKET_CLOSE_UTC_HOUR = 10;
 const DEFAULT_MARKET_CLOSE_UTC_MINUTE = 5;
+const DEFAULT_MARKET_TIMEZONE = "Asia/Kolkata";
+const SNAPSHOT_TOLERANCE = 0.01;
 const PORTFOLIO_COLUMN_CANDIDATES = {
   id: ["id"],
   date: ["portfolio_date", "date", "as_of_date", "entry_date", "snapshot_date"],
@@ -14,8 +16,9 @@ const PORTFOLIO_COLUMN_CANDIDATES = {
 
 async function main() {
   const config = getConfig();
+  const snapshotDate = getTodayIsoDate(config.timezone);
 
-  if (!shouldRunSnapshot(config)) {
+  if (!shouldRunSnapshot(config, snapshotDate)) {
     console.log("Skipping snapshot because market close time has not been reached yet.");
     return;
   }
@@ -33,12 +36,18 @@ async function main() {
   const openTradeRows = buildOpenTradeRows(trades, positions);
   const valuedOpenRows = openTradeRows.map((trade) => valueOpenTrade(trade, marketSheet, config));
   const totalUnrealizedPnl = valuedOpenRows.reduce((total, row) => total + row.unrealizedPnl, 0);
-  const latestRealizedCapital = resolveLatestRealizedCapital(portfolioRows, portfolioColumnMap);
-  const snapshotDate = getTodayIsoDate();
+  const latestRealizedCapital = resolveLatestRealizedCapital(portfolioRows, portfolioColumnMap, snapshotDate);
   const niftyClose = toNumeric(marketSheet.namedCells.get("NIFTY_50"));
+  const mtmCapital = latestRealizedCapital + totalUnrealizedPnl;
+  validateSnapshotMath({
+    latestRealizedCapital,
+    totalUnrealizedPnl,
+    mtmCapital,
+    snapshotDate
+  });
   const snapshotPayload = mapPortfolioPayload({
     date: snapshotDate,
-    capital: latestRealizedCapital + totalUnrealizedPnl,
+    capital: mtmCapital,
     realizedPnl: totalUnrealizedPnl,
     niftyClose,
     source: "trade_journal_mtm"
@@ -47,12 +56,16 @@ async function main() {
 
   if (existingTodayRow) {
     await updatePortfolioRow(config, portfolioColumnMap, existingTodayRow, snapshotPayload);
-    console.log(`Updated MTM snapshot for ${snapshotDate}. Total unrealized P&L: ${formatNumber(totalUnrealizedPnl)}.`);
+    console.log(
+      `Updated MTM snapshot for ${snapshotDate}. Base capital: ${formatNumber(latestRealizedCapital)}, open P&L: ${formatNumber(totalUnrealizedPnl)}, ending capital: ${formatNumber(mtmCapital)}.`
+    );
     return;
   }
 
   await createPortfolioRow(config, snapshotPayload);
-  console.log(`Created MTM snapshot for ${snapshotDate}. Total unrealized P&L: ${formatNumber(totalUnrealizedPnl)}.`);
+  console.log(
+    `Created MTM snapshot for ${snapshotDate}. Base capital: ${formatNumber(latestRealizedCapital)}, open P&L: ${formatNumber(totalUnrealizedPnl)}, ending capital: ${formatNumber(mtmCapital)}.`
+  );
 }
 
 function getConfig() {
@@ -68,13 +81,19 @@ function getConfig() {
   return {
     supabaseUrl,
     serviceRoleKey,
-    marketDataCsvUrl
+    marketDataCsvUrl,
+    timezone: process.env.MARKET_TIMEZONE?.trim() || DEFAULT_MARKET_TIMEZONE
   };
 }
 
-function shouldRunSnapshot(config) {
+function shouldRunSnapshot(config, snapshotDate) {
   if (process.env.FORCE_SNAPSHOT === "true") {
     return true;
+  }
+
+  if (isWeekendDate(snapshotDate, config.timezone)) {
+    console.log(`Skipping snapshot for ${snapshotDate} because it is not a market day.`);
+    return false;
   }
 
   const now = new Date();
@@ -326,14 +345,14 @@ async function loadMarketSheet(csvUrl) {
   };
 }
 
-function resolveLatestRealizedCapital(rows, columnMap) {
+function resolveLatestRealizedCapital(rows, columnMap, snapshotDate) {
   const realizedRows = rows
     .filter((row) => isRealizedRow(row, columnMap))
     .map((row) => ({
-      date: row[columnMap.date],
+      date: normalizeTradingDate(row[columnMap.date]),
       capital: toNumeric(row[columnMap.capital])
     }))
-    .filter((row) => row.date && row.capital > 0)
+    .filter((row) => row.date && row.capital > 0 && row.date <= snapshotDate)
     .sort((left, right) => String(left.date).localeCompare(String(right.date)));
 
   if (realizedRows.length === 0) {
@@ -341,6 +360,25 @@ function resolveLatestRealizedCapital(rows, columnMap) {
   }
 
   return realizedRows.at(-1).capital;
+}
+
+function validateSnapshotMath({ latestRealizedCapital, totalUnrealizedPnl, mtmCapital, snapshotDate }) {
+  if (!Number.isFinite(latestRealizedCapital) || latestRealizedCapital <= 0) {
+    throw new Error(`Cannot build MTM snapshot for ${snapshotDate}: invalid realized capital base.`);
+  }
+
+  if (!Number.isFinite(totalUnrealizedPnl)) {
+    throw new Error(`Cannot build MTM snapshot for ${snapshotDate}: invalid open-position P&L.`);
+  }
+
+  if (!Number.isFinite(mtmCapital) || mtmCapital <= 0) {
+    throw new Error(`Cannot build MTM snapshot for ${snapshotDate}: ending capital is invalid.`);
+  }
+
+  const recomputedCapital = latestRealizedCapital + totalUnrealizedPnl;
+  if (Math.abs(recomputedCapital - mtmCapital) > SNAPSHOT_TOLERANCE) {
+    throw new Error(`Cannot build MTM snapshot for ${snapshotDate}: capital does not reconcile with realized capital plus open P&L.`);
+  }
 }
 
 function findExistingSnapshot(rows, columnMap, date, sourceValue) {
@@ -601,9 +639,24 @@ function toNumeric(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-function getTodayIsoDate() {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+function getTodayIsoDate(timezone) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+
+  return formatter.format(new Date());
+}
+
+function isWeekendDate(dateString, timezone) {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short"
+  }).format(new Date(`${dateString}T12:00:00Z`));
+
+  return weekday === "Sat" || weekday === "Sun";
 }
 
 function normalCdf(value) {
