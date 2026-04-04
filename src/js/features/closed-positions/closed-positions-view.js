@@ -20,21 +20,25 @@ export function createClosedPositionsView() {
   const modal = createModal();
 
   let snapshotState = [];
+  let selectedTradeIds = new Set();
 
   statusBanner.textContent = "Loading closed positions...";
   tableHead.innerHTML = `
     <tr>
+      <th><input type="checkbox" class="closed-row-checkbox" aria-label="Select all closed trades"></th>
       <th>Strategy</th>
       <th>Side</th>
       <th>Symbol</th>
       <th>Expiry</th>
-      <th>Instrument</th>
       <th>Strike</th>
+      <th>Type</th>
       <th>Qty</th>
       <th>Entry</th>
       <th>Exit</th>
       <th>P&L</th>
       <th>Tag</th>
+      <th>Entry Date</th>
+      <th>Exit Date</th>
       <th>View</th>
     </tr>
   `;
@@ -44,10 +48,22 @@ export function createClosedPositionsView() {
   card.append(header, statusBanner, summaryGrid, filters.element, filteredSummary, tableWrap);
   wrapper.append(card, modal.overlay);
 
+  const selectAllCheckbox = tableHead.querySelector('input[type="checkbox"]');
+
   filters.onChange(() => {
+    renderFilteredState();
+  });
+
+  selectAllCheckbox?.addEventListener("change", () => {
     const filteredPositions = applyFilters(snapshotState, filters.getValue());
-    renderFilteredSummary(filteredSummary, filteredPositions, snapshotState.length);
-    renderTable(filteredPositions, tableBody, modal, loadSnapshot, statusBanner);
+
+    if (selectAllCheckbox.checked) {
+      filteredPositions.forEach((position) => selectedTradeIds.add(position.tradeId));
+    } else {
+      filteredPositions.forEach((position) => selectedTradeIds.delete(position.tradeId));
+    }
+
+    renderFilteredState();
   });
 
   loadSnapshot();
@@ -58,16 +74,30 @@ export function createClosedPositionsView() {
       const snapshot = await getClosedPositionsSnapshot();
       snapshotState = snapshot.positions;
       renderSummary(summaryGrid, snapshot.summary);
-      const filteredPositions = applyFilters(snapshotState, filters.getValue());
-      renderFilteredSummary(filteredSummary, filteredPositions, snapshotState.length);
-      renderTable(filteredPositions, tableBody, modal, loadSnapshot, statusBanner);
       populateFilterOptions(filters, snapshot.positions);
+      syncSelectionState(snapshotState, selectedTradeIds);
+      renderFilteredState();
       setStatus(statusBanner, `Loaded ${snapshot.summary.closedCount} closed position(s).`, "success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load closed positions.";
       setStatus(statusBanner, message, "error");
-      tableBody.innerHTML = `<tr><td colspan="11" class="positions-empty">${escapeHtml(message)}</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="15" class="positions-empty">${escapeHtml(message)}</td></tr>`;
     }
+  }
+
+  function renderFilteredState() {
+    const filteredPositions = applyFilters(snapshotState, filters.getValue());
+    renderFilteredSummary(filteredSummary, filteredPositions, snapshotState.length, selectedTradeIds);
+    renderTable(
+      filteredPositions,
+      tableBody,
+      modal,
+      loadSnapshot,
+      statusBanner,
+      selectedTradeIds,
+      () => renderFilteredState(),
+      selectAllCheckbox
+    );
   }
 }
 
@@ -85,6 +115,9 @@ function createFilterBar() {
   const symbol = createSelect("All Symbols");
   const strategy = createSelect("All Strategies");
   const tag = createSelect("All Tags");
+  const side = createSelect("All Sides");
+  const optionType = createSelect("All Types");
+  const sort = createSelect("Sort Order");
   const dateFrom = document.createElement("input");
   const dateTo = document.createElement("input");
   const search = document.createElement("input");
@@ -102,13 +135,21 @@ function createFilterBar() {
   search.className = "closed-filter-input";
   search.placeholder = "Search symbol or strategy";
 
-  [symbol, strategy, tag, dateFrom, dateTo, search].forEach((control) => {
+  setSelectOptions(sort, "Sort Order", [
+    { value: "exit-desc", label: "Exit Date: Newest" },
+    { value: "exit-asc", label: "Exit Date: Oldest" },
+    { value: "entry-asc", label: "Entry Date: Oldest" },
+    { value: "entry-desc", label: "Entry Date: Newest" }
+  ]);
+  sort.value = "exit-desc";
+
+  [symbol, strategy, tag, side, optionType, sort, dateFrom, dateTo, search].forEach((control) => {
     control.addEventListener("input", () => {
       listeners.forEach((listener) => listener());
     });
   });
 
-  element.append(symbol, strategy, tag, dateFrom, dateTo, search);
+  element.append(symbol, strategy, tag, side, optionType, sort, dateFrom, dateTo, search);
 
   return {
     element,
@@ -120,15 +161,20 @@ function createFilterBar() {
         symbol: symbol.value,
         strategy: strategy.value,
         tag: tag.value,
+        side: side.value,
+        optionType: optionType.value,
+        sortBy: sort.value || "exit-desc",
         dateFrom: dateFrom.value,
         dateTo: dateTo.value,
         search: search.value.trim().toLowerCase()
       };
     },
-    setOptions({ symbols, strategies, tags }) {
+    setOptions({ symbols, strategies, tags, sides, optionTypes }) {
       setSelectOptions(symbol, "All Symbols", symbols);
       setSelectOptions(strategy, "All Strategies", strategies);
       setSelectOptions(tag, "All Tags", tags);
+      setSelectOptions(side, "All Sides", sides);
+      setSelectOptions(optionType, "All Types", optionTypes);
     }
   };
 }
@@ -151,8 +197,13 @@ function setSelectOptions(select, defaultLabel, values) {
 
   values.forEach((value) => {
     const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
+    if (typeof value === "string") {
+      option.value = value;
+      option.textContent = value;
+    } else {
+      option.value = value.value;
+      option.textContent = value.label;
+    }
     select.appendChild(option);
   });
 
@@ -165,7 +216,9 @@ function populateFilterOptions(filters, positions) {
   filters.setOptions({
     symbols: sortUnique(positions.map((item) => item.symbol)),
     strategies: sortUnique(positions.map((item) => item.strategyName)),
-    tags: sortUnique(positions.map((item) => item.tag).filter((value) => value && value !== "-"))
+    tags: sortUnique(positions.map((item) => item.tag).filter((value) => value && value !== "-")),
+    sides: sortUnique(positions.map((item) => item.action).filter((value) => value && value !== "-")),
+    optionTypes: sortUnique(positions.map((item) => getInstrumentLabel(item)).filter((value) => value && value !== "-"))
   });
 }
 
@@ -198,48 +251,79 @@ function renderSummary(container, summary) {
   `;
 }
 
-function renderFilteredSummary(container, positions, totalCount) {
-  const filteredPnl = positions.reduce((total, position) => total + Number(position.realizedPnl || 0), 0);
-  const winCount = positions.filter((position) => Number(position.realizedPnl || 0) > 0).length;
-  const lossCount = positions.filter((position) => Number(position.realizedPnl || 0) < 0).length;
+function renderFilteredSummary(container, positions, totalCount, selectedTradeIds) {
+  const selectedPositions = positions.filter((position) => selectedTradeIds.has(position.tradeId));
+  const scopedPositions = selectedPositions.length > 0 ? selectedPositions : positions;
+  const scopedPnl = scopedPositions.reduce((total, position) => total + Number(position.realizedPnl || 0), 0);
+  const winCount = scopedPositions.filter((position) => Number(position.realizedPnl || 0) > 0).length;
+  const lossCount = scopedPositions.filter((position) => Number(position.realizedPnl || 0) < 0).length;
   const isFiltered = positions.length !== totalCount;
-  const scopeLabel = isFiltered ? "Filtered View" : "All Visible Rows";
-  const pnlToneClass = filteredPnl >= 0 ? "is-positive" : "is-negative";
+  const hasSelection = selectedPositions.length > 0;
+  const scopeLabel = hasSelection
+    ? "Selected Trades"
+    : isFiltered
+      ? "Filtered View"
+      : "All Visible Rows";
+  const pnlToneClass = scopedPnl >= 0 ? "is-positive" : "is-negative";
 
   container.innerHTML = `
     <span class="closed-filter-pill">${scopeLabel}</span>
-    <span>Trades <strong>${positions.length}</strong></span>
-    <span class="${pnlToneClass}">P&amp;L <strong>${formatSigned(filteredPnl)}</strong></span>
+    <span>Trades <strong>${scopedPositions.length}</strong></span>
+    <span class="${pnlToneClass}">P&amp;L <strong>${formatSigned(scopedPnl)}</strong></span>
     <span>Wins <strong>${winCount}</strong></span>
     <span>Losses <strong>${lossCount}</strong></span>
+    ${hasSelection ? `<span>Visible Rows <strong>${positions.length}</strong></span>` : ""}
   `;
 }
 
-function renderTable(positions, tableBody, modal, reload, statusBanner) {
+function renderTable(positions, tableBody, modal, reload, statusBanner, selectedTradeIds, onSelectionChange, selectAllCheckbox) {
   tableBody.innerHTML = "";
 
   if (positions.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="11" class="positions-empty">No closed positions match the current filters.</td></tr>`;
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    tableBody.innerHTML = `<tr><td colspan="15" class="positions-empty">No closed positions match the current filters.</td></tr>`;
     return;
   }
 
   positions.forEach((position) => {
     const row = document.createElement("tr");
+    const checkboxCell = document.createElement("td");
     const viewCell = document.createElement("td");
     const button = createElement("button", "button-secondary closed-view-btn", "View");
+    const checkbox = document.createElement("input");
+
+    checkbox.type = "checkbox";
+    checkbox.className = "closed-row-checkbox";
+    checkbox.checked = selectedTradeIds.has(position.tradeId);
+    checkbox.setAttribute("aria-label", `Select ${position.symbol} ${position.tradeDate}`);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        selectedTradeIds.add(position.tradeId);
+      } else {
+        selectedTradeIds.delete(position.tradeId);
+      }
+
+      updateSelectAllState(selectAllCheckbox, positions, selectedTradeIds);
+      onSelectionChange();
+    });
 
     row.innerHTML = `
       <td>${escapeHtml(position.strategyName)}</td>
       <td><span class="closed-side-badge ${getSideTone(position.action)}">${escapeHtml(position.action || "-")}</span></td>
       <td>${escapeHtml(position.symbol)}</td>
       <td>${escapeHtml(position.expiry)}</td>
-      <td>${escapeHtml(getInstrumentLabel(position))}</td>
       <td>${formatNumber(position.strike)}</td>
+      <td>${escapeHtml(getInstrumentLabel(position))}</td>
       <td>${position.qty}</td>
       <td>${formatNumber(position.entryPrice)}</td>
       <td>${formatNumber(position.averageExitPrice)}</td>
       <td class="${position.realizedPnl >= 0 ? "closed-pnl-positive" : "closed-pnl-negative"}">${formatSigned(position.realizedPnl)}</td>
       <td>${escapeHtml(position.tag)}</td>
+      <td>${escapeHtml(position.tradeDate)}</td>
+      <td>${escapeHtml(position.lastExitDate)}</td>
     `;
 
     button.type = "button";
@@ -247,10 +331,14 @@ function renderTable(positions, tableBody, modal, reload, statusBanner) {
       openModal(position, modal, reload, statusBanner);
     });
 
+    checkboxCell.appendChild(checkbox);
+    row.insertBefore(checkboxCell, row.firstChild);
     viewCell.appendChild(button);
     row.appendChild(viewCell);
     tableBody.appendChild(row);
   });
+
+  updateSelectAllState(selectAllCheckbox, positions, selectedTradeIds);
 }
 
 function openModal(position, modal, reload, statusBanner) {
@@ -511,7 +599,7 @@ function closeModal(overlay, body) {
 }
 
 function applyFilters(positions, filters) {
-  return positions.filter((item) => {
+  const filtered = positions.filter((item) => {
     if (filters.symbol && item.symbol !== filters.symbol) {
       return false;
     }
@@ -521,6 +609,14 @@ function applyFilters(positions, filters) {
     }
 
     if (filters.tag && item.tag !== filters.tag) {
+      return false;
+    }
+
+    if (filters.side && item.action !== filters.side) {
+      return false;
+    }
+
+    if (filters.optionType && getInstrumentLabel(item) !== filters.optionType) {
       return false;
     }
 
@@ -541,10 +637,75 @@ function applyFilters(positions, filters) {
 
     return true;
   });
+
+  return sortClosedPositions(filtered, filters.sortBy);
+}
+
+function syncSelectionState(positions, selectedTradeIds) {
+  const availableTradeIds = new Set(positions.map((position) => position.tradeId));
+
+  [...selectedTradeIds].forEach((tradeId) => {
+    if (!availableTradeIds.has(tradeId)) {
+      selectedTradeIds.delete(tradeId);
+    }
+  });
+}
+
+function updateSelectAllState(selectAllCheckbox, positions, selectedTradeIds) {
+  if (!selectAllCheckbox) {
+    return;
+  }
+
+  const visibleTradeIds = positions.map((position) => position.tradeId);
+  const selectedVisibleCount = visibleTradeIds.filter((tradeId) => selectedTradeIds.has(tradeId)).length;
+
+  selectAllCheckbox.checked = selectedVisibleCount > 0 && selectedVisibleCount === visibleTradeIds.length;
+  selectAllCheckbox.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleTradeIds.length;
 }
 
 function sortUnique(values) {
   return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
+}
+
+function sortClosedPositions(positions, sortBy) {
+  const sorted = [...positions];
+
+  sorted.sort((left, right) => {
+    if (sortBy === "entry-asc") {
+      return compareDates(left.tradeDate, right.tradeDate)
+        || compareDates(left.lastExitDate, right.lastExitDate)
+        || left.symbol.localeCompare(right.symbol);
+    }
+
+    if (sortBy === "entry-desc") {
+      return compareDates(right.tradeDate, left.tradeDate)
+        || compareDates(right.lastExitDate, left.lastExitDate)
+        || left.symbol.localeCompare(right.symbol);
+    }
+
+    if (sortBy === "exit-asc") {
+      return compareDates(left.lastExitDate, right.lastExitDate)
+        || compareDates(left.tradeDate, right.tradeDate)
+        || left.symbol.localeCompare(right.symbol);
+    }
+
+    return compareDates(right.lastExitDate, left.lastExitDate)
+      || compareDates(right.tradeDate, left.tradeDate)
+      || left.symbol.localeCompare(right.symbol);
+  });
+
+  return sorted;
+}
+
+function compareDates(left, right) {
+  const normalizedLeft = normalizeDateValue(left);
+  const normalizedRight = normalizeDateValue(right);
+  return normalizedLeft.localeCompare(normalizedRight);
+}
+
+function normalizeDateValue(value) {
+  const normalized = String(value || "").trim();
+  return normalized && normalized !== "-" ? normalized : "0000-00-00";
 }
 
 function createSimpleField(label, type, name, value) {

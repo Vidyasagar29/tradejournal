@@ -50,8 +50,11 @@ export function createDashboardView() {
         riskSummary: risk.summary,
         recentClosedTrades: portfolio.recentClosedTrades.length
       });
+      hero.status.hidden = true;
+      hero.status.textContent = "";
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load dashboard snapshot.";
+      hero.status.hidden = false;
       hero.status.textContent = message;
       hero.status.className = "trade-status-banner is-error";
     }

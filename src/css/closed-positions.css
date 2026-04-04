@@ -27,7 +27,7 @@
 
 .closed-filter-bar {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 4px;
   width: min(980px, 100%);
 }
@@ -90,6 +90,28 @@
   border-radius: var(--radius-md);
   background: rgba(9, 15, 24, 0.88);
   width: min(980px, 100%);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 157, 30, 0.35) rgba(255, 255, 255, 0.03);
+}
+
+.closed-table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.closed-table-wrap::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+}
+
+.closed-table-wrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 157, 30, 0.38), rgba(39, 193, 184, 0.28));
+  border-radius: 999px;
+  border: 2px solid rgba(9, 15, 24, 0.88);
+}
+
+.closed-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 157, 30, 0.52), rgba(39, 193, 184, 0.4));
 }
 
 .closed-table {
@@ -111,6 +133,19 @@
   border-bottom: 1px solid var(--border-soft);
   text-align: left;
   vertical-align: middle;
+}
+
+.closed-table th:first-child,
+.closed-table td:first-child {
+  width: 34px;
+  text-align: center;
+}
+
+.closed-row-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .closed-table th {
@@ -350,7 +385,7 @@
 @media (max-width: 980px) {
   .closed-summary-grid,
   .closed-filter-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .closed-inline-meta {

@@ -59,6 +59,24 @@
   gap: 5px;
 }
 
+.analytics-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.analytics-sort-select {
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+}
+
 .analytics-table-wrap {
   overflow: auto;
   max-height: calc(100vh - 214px);

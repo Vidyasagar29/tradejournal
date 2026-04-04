@@ -11,7 +11,9 @@ export function createTradeAnalyticsView() {
   const outcomeCard = createChartCard("Win / Loss Mix");
   const strategyCard = createChartCard("Strategy Performance");
   const tableCard = createElement("section", "analytics-table-card");
-  const tableTitle = createElement("h3", "", "Strategy Performance");
+  const tableHeader = createElement("div", "analytics-table-header");
+  const tableTitle = createElement("h3", "", "Closed Trades Timeline");
+  const sortControl = createSortSelect();
   const tableWrap = createElement("div", "analytics-table-wrap");
   const table = document.createElement("table");
   const tableBody = document.createElement("tbody");
@@ -20,21 +22,24 @@ export function createTradeAnalyticsView() {
   table.innerHTML = `
     <thead>
       <tr>
+        <th>Entry Date</th>
+        <th>Exit Date</th>
         <th>Strategy</th>
-        <th>Trades</th>
-        <th>Wins</th>
-        <th>Win Rate</th>
+        <th>Symbol</th>
+        <th>Side</th>
         <th>P&L</th>
       </tr>
     </thead>
   `;
   table.appendChild(tableBody);
   tableWrap.appendChild(table);
-  tableCard.append(tableTitle, tableWrap);
+  tableHeader.append(tableTitle, sortControl);
+  tableCard.append(tableHeader, tableWrap);
   chartGrid.append(outcomeCard.card, strategyCard.card);
   card.append(header, statusBanner, summaryGrid, chartGrid, tableCard);
   wrapper.appendChild(card);
 
+  sortControl.addEventListener("input", loadSnapshot);
   loadSnapshot();
   return wrapper;
 
@@ -42,7 +47,7 @@ export function createTradeAnalyticsView() {
     try {
       const snapshot = await summarizePortfolio();
       renderSummary(summaryGrid, snapshot.tradeSummary);
-      renderStrategyTable(tableBody, snapshot.strategyPerformance);
+      renderClosedTradesTable(tableBody, snapshot.closedTrades, sortControl.value);
       renderOutcomeChart(outcomeCard.canvas, snapshot.tradeSummary);
       renderStrategyChart(strategyCard.canvas, snapshot.strategyPerformance);
 
@@ -54,7 +59,7 @@ export function createTradeAnalyticsView() {
       const message = error instanceof Error ? error.message : "Unable to load trade analytics.";
       statusBanner.textContent = message;
       statusBanner.className = "trade-status-banner is-error";
-      tableBody.innerHTML = `<tr><td colspan="5" class="positions-empty">${escapeHtml(message)}</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="6" class="positions-empty">${escapeHtml(message)}</td></tr>`;
     }
   }
 }
@@ -78,6 +83,24 @@ function createChartCard(titleText) {
   return { card, canvas };
 }
 
+function createSortSelect() {
+  const select = document.createElement("select");
+  select.className = "analytics-sort-select";
+  [
+    ["exit-desc", "Exit Date: Newest"],
+    ["exit-asc", "Exit Date: Oldest"],
+    ["entry-asc", "Entry Date: Oldest"],
+    ["entry-desc", "Entry Date: Newest"]
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+  select.setAttribute("aria-label", "Sort closed trade timeline");
+  return select;
+}
+
 function renderSummary(container, summary) {
   container.innerHTML = `
     <article class="trade-summary-block analytics-stat-card">
@@ -99,22 +122,23 @@ function renderSummary(container, summary) {
   `;
 }
 
-function renderStrategyTable(tableBody, strategies) {
+function renderClosedTradesTable(tableBody, trades, sortBy) {
   tableBody.innerHTML = "";
 
-  if (strategies.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="5" class="positions-empty">No strategy analytics available yet.</td></tr>`;
+  if (trades.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="6" class="positions-empty">No closed trades available yet.</td></tr>`;
     return;
   }
 
-  strategies.forEach((strategy) => {
+  sortClosedTrades(trades, sortBy).slice(0, 24).forEach((trade) => {
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${escapeHtml(strategy.name)}</td>
-      <td>${strategy.tradeCount}</td>
-      <td>${strategy.winCount}</td>
-      <td>${strategy.winRate.toFixed(1)}%</td>
-      <td class="${strategy.pnl >= 0 ? "analytics-positive" : "analytics-negative"}">${formatSigned(strategy.pnl)}</td>
+      <td>${escapeHtml(trade.tradeDate)}</td>
+      <td>${escapeHtml(trade.lastExitDate)}</td>
+      <td>${escapeHtml(trade.strategyName)}</td>
+      <td>${escapeHtml(trade.symbol)}</td>
+      <td>${escapeHtml(trade.action)}</td>
+      <td class="${trade.realizedPnl >= 0 ? "analytics-positive" : "analytics-negative"}">${formatSigned(trade.realizedPnl)}</td>
     `;
     tableBody.appendChild(row);
   });
@@ -232,4 +256,43 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function sortClosedTrades(trades, sortBy) {
+  const sorted = [...trades];
+
+  sorted.sort((left, right) => {
+    if (sortBy === "entry-asc") {
+      return compareDates(left.tradeDate, right.tradeDate)
+        || compareDates(left.lastExitDate, right.lastExitDate)
+        || left.symbol.localeCompare(right.symbol);
+    }
+
+    if (sortBy === "entry-desc") {
+      return compareDates(right.tradeDate, left.tradeDate)
+        || compareDates(right.lastExitDate, left.lastExitDate)
+        || left.symbol.localeCompare(right.symbol);
+    }
+
+    if (sortBy === "exit-asc") {
+      return compareDates(left.lastExitDate, right.lastExitDate)
+        || compareDates(left.tradeDate, right.tradeDate)
+        || left.symbol.localeCompare(right.symbol);
+    }
+
+    return compareDates(right.lastExitDate, left.lastExitDate)
+      || compareDates(right.tradeDate, left.tradeDate)
+      || left.symbol.localeCompare(right.symbol);
+  });
+
+  return sorted;
+}
+
+function compareDates(left, right) {
+  return normalizeDateValue(left).localeCompare(normalizeDateValue(right));
+}
+
+function normalizeDateValue(value) {
+  const normalized = String(value || "").trim();
+  return normalized && normalized !== "-" ? normalized : "0000-00-00";
 }
