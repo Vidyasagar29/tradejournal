@@ -1,6 +1,6 @@
 #app {
   min-height: 100vh;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 .app-shell {
@@ -8,7 +8,7 @@
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 .app-frame {
@@ -20,9 +20,9 @@
   border-radius: 0;
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(18px);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 .app-frame::before {
@@ -48,6 +48,7 @@
 .content-shell {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   min-width: 0;
   background:
     linear-gradient(180deg, rgba(255, 157, 30, 0.04), transparent 18%),
@@ -60,6 +61,8 @@
 
 .content-panel {
   flex: 1;
+  min-height: 0;
+  overflow: visible;
   padding: 8px 10px 10px 8px;
 }
 

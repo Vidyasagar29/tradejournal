@@ -43,8 +43,8 @@ export function createOpenPositionsView() {
       <th>Side</th>
       <th>Symbol</th>
       <th>Expiry</th>
-      <th>Instrument</th>
       <th>Strike</th>
+      <th>Type</th>
       <th>Qty</th>
       <th>Remaining</th>
       <th>Entry</th>
@@ -459,8 +459,8 @@ function createPositionRow(position, statusBanner, modal, reload) {
     <td><span class="positions-side-badge ${getSideTone(position.action)}">${escapeHtml(position.action || "-")}</span></td>
     <td>${escapeHtml(position.symbol)}</td>
     <td>${escapeHtml(position.expiry)}</td>
-    <td>${escapeHtml(getInstrumentLabel(position))}</td>
     <td>${formatValue(position.strike)}</td>
+    <td>${escapeHtml(getInstrumentLabel(position))}</td>
     <td>${position.initialQty}</td>
     <td><strong>${position.remainingQty}</strong></td>
     <td>${formatValue(position.entryPrice)}</td>

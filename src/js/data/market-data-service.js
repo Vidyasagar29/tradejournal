@@ -195,17 +195,6 @@ function resolveSheetSpot(row, niftySpotColumn, dedicatedNiftySpot) {
   return genericSpot;
 }
 
-function pickFirstNumber(values) {
-  for (const value of values) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric) && numeric > 0) {
-      return numeric;
-    }
-  }
-
-  return null;
-}
-
 function buildSymbolSpotMap(rows) {
   const spotMap = new Map(sheetSymbolSpotCache);
 
@@ -237,6 +226,17 @@ function resolveSheetOptionIv(position, currentPriceIvs) {
   }
 
   return pickFirstNumber([currentPriceIvs.get(optionType)]);
+}
+
+function pickFirstNumber(values) {
+  for (const value of values) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return numeric;
+    }
+  }
+
+  return null;
 }
 
 function normalizeValue(value) {
