@@ -221,10 +221,10 @@ function renderHealthList(container, snapshot) {
     : "Supabase credentials still need attention.";
   const trackingMessage = snapshot.portfolioTracking?.source === "portfolio_table"
     ? "Equity and drawdown are reading from the portfolio table."
-    : "Equity and drawdown are using the derived fallback snapshot.";
-  const ivMessage = snapshot.riskSummary.marketIvCount > 0
-    ? `${snapshot.riskSummary.marketIvCount} open position(s) are using market IV data.`
-    : "Open positions are still falling back to default or entry IV.";
+    : "Equity and drawdown are using calculated trade data.";
+  const ivMessage = snapshot.riskSummary.sheetIvCount > 0
+    ? `${snapshot.riskSummary.sheetIvCount} open position(s) are using Google Sheet IV data.`
+    : "Open positions are using default or entry IV.";
 
   [
     ["Connection", connectionMessage],

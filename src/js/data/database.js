@@ -9,8 +9,7 @@ const KNOWN_TABLES = [
   "positions",
   "exits",
   "portfolio",
-  "default_iv",
-  "market_data"
+  "default_iv"
 ];
 
 export function createDatabase() {

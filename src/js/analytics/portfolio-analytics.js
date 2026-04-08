@@ -30,13 +30,13 @@ export async function summarizePortfolio() {
     .filter(Boolean)
     .sort((left, right) => String(left.lastExitDate).localeCompare(String(right.lastExitDate)));
 
-  const derivedDailyPnlMap = closedTrades.reduce((map, trade) => {
+  const derivedRealizedPnlMap = closedTrades.reduce((map, trade) => {
     const current = map.get(trade.lastExitDate) || 0;
     map.set(trade.lastExitDate, current + trade.realizedPnl);
     return map;
   }, new Map());
 
-  const derivedEquityCurve = buildEquityCurveFromDailyPnlMap(derivedDailyPnlMap);
+  const derivedEquityCurve = buildEquityCurveFromRealizedPnlMap(derivedRealizedPnlMap);
   const openPositionMarkToMarket = await buildOpenPositionMarkToMarket(trades, positions, strategyMap);
   const portfolioSync = await syncPortfolioSnapshots(derivedEquityCurve);
   const trackedPortfolio = await loadTrackedPortfolio();
@@ -154,21 +154,22 @@ function buildTradeSummary(closedTrades, equityCurve) {
   };
 }
 
-function buildEquityCurveFromDailyPnlMap(dailyPnlMap) {
+function buildEquityCurveFromRealizedPnlMap(realizedPnlMap) {
   let runningCapital = INITIAL_CAPITAL;
   let peakCapital = INITIAL_CAPITAL;
 
-  return [...dailyPnlMap.entries()]
+  return [...realizedPnlMap.entries()]
     .sort((left, right) => String(left[0]).localeCompare(String(right[0])))
-    .map(([date, pnl]) => {
-      runningCapital += pnl;
+    .map(([date, realizedDailyPnl]) => {
+      runningCapital += realizedDailyPnl;
       peakCapital = Math.max(peakCapital, runningCapital);
       const drawdownValue = runningCapital - peakCapital;
       const drawdownPercent = peakCapital > 0 ? (drawdownValue / peakCapital) * 100 : 0;
 
       return {
         date,
-        dailyPnl: pnl,
+        realizedDailyPnl,
+        dailyPnl: realizedDailyPnl,
         capital: runningCapital,
         drawdownValue,
         drawdownPercent
@@ -233,45 +234,26 @@ async function syncPortfolioSnapshots(equityCurve) {
     const columnMap = await resolvePortfolioColumnMap();
 
     if (!columnMap.date || !columnMap.capital) {
-      return { status: "schema_not_compatible" };
+      return { status: "portfolio_schema_missing" };
     }
 
-    const existingRows = await portfolioRepository.listSnapshots();
-    await prunePortfolioSnapshots(existingRows, equityCurve, columnMap);
-
     for (const point of equityCurve) {
-      const payload = mapPortfolioPayload(point, columnMap, "trade_journal_realized");
       const existingRowsForDate = await portfolioRepository.findByDate(point.date);
-      const existingRealizedRow = existingRowsForDate.find((row) => isRealizedPortfolioRow(row, columnMap));
+      const existingPortfolioRow = selectPortfolioRowForDate(existingRowsForDate, columnMap);
+      const payload = mapPortfolioPayload(point, columnMap, existingPortfolioRow);
 
-      if (!existingRealizedRow) {
+      if (!existingPortfolioRow) {
         await portfolioRepository.createSnapshot(payload);
         continue;
       }
 
-      const matcher = buildPortfolioMatcher(existingRealizedRow, point.date, columnMap);
+      const matcher = buildPortfolioMatcher(existingPortfolioRow, point.date, columnMap);
       await portfolioRepository.updateSnapshot(matcher, payload);
     }
 
     return { status: "synced" };
   } catch {
-    return { status: "fallback_only" };
-  }
-}
-
-async function prunePortfolioSnapshots(existingRows, equityCurve, columnMap) {
-  const activeDates = new Set(equityCurve.map((point) => point.date));
-  const managedRows = existingRows.filter((row) => isRealizedPortfolioRow(row, columnMap));
-
-  for (const row of managedRows) {
-    const rowDate = row[columnMap.date];
-
-    if (!rowDate || activeDates.has(rowDate)) {
-      continue;
-    }
-
-    const matcher = buildPortfolioMatcher(row, rowDate, columnMap);
-    await portfolioRepository.deleteSnapshots(matcher);
+    return { status: "calculated_trade_data_only" };
   }
 }
 
@@ -295,12 +277,14 @@ async function loadTrackedPortfolio() {
       return {
         date: row.date,
         capital: row.capital,
-        dailyPnl: row.dailyPnl,
+        realizedDailyPnl: row.realizedDailyPnl,
+        unrealizedPnl: row.unrealizedPnl,
+        dailyPnl: row.realizedDailyPnl,
         drawdownValue,
         drawdownPercent
       };
     });
-    const hasStoredMtm = normalizedRows.some((row) => row.source === "trade_journal_mtm");
+    const hasStoredMtm = normalizedRows.some((row) => Number(row.unrealizedPnl || 0) !== 0);
 
     return { curve, hasStoredMtm };
   } catch {
@@ -308,14 +292,19 @@ async function loadTrackedPortfolio() {
   }
 }
 
-function mapPortfolioPayload(point, columnMap, sourceValue = "trade_journal") {
+function mapPortfolioPayload(point, columnMap, existingRow = null) {
   const payload = {};
+  const unrealizedPnl = resolveExistingUnrealizedPnl(existingRow, columnMap);
 
   payload[columnMap.date] = point.date;
-  payload[columnMap.capital] = point.capital;
+  payload[columnMap.capital] = point.capital + unrealizedPnl;
 
   if (columnMap.realized_pnl) {
-    payload[columnMap.realized_pnl] = point.dailyPnl;
+    payload[columnMap.realized_pnl] = point.realizedDailyPnl ?? point.dailyPnl ?? 0;
+  }
+
+  if (columnMap.unrealized_pnl) {
+    payload[columnMap.unrealized_pnl] = unrealizedPnl;
   }
 
   if (columnMap.closed_count) {
@@ -323,7 +312,7 @@ function mapPortfolioPayload(point, columnMap, sourceValue = "trade_journal") {
   }
 
   if (columnMap.source) {
-    payload[columnMap.source] = sourceValue;
+    payload[columnMap.source] = "trade_journal";
   }
 
   return payload;
@@ -343,24 +332,19 @@ function isManagedPortfolioRow(row, columnMap) {
   }
 
   const source = String(row[columnMap.source] || "").trim();
-  return source === "" || source.startsWith("trade_journal");
+  return source === "trade_journal";
 }
 
-function isRealizedPortfolioRow(row, columnMap) {
-  if (!columnMap.source) {
-    return true;
-  }
-
-  const source = String(row[columnMap.source] || "").trim();
-  return source === "" || source === "trade_journal" || source === "trade_journal_realized";
+function selectPortfolioRowForDate(rows, columnMap) {
+  return rows.find((row) => isManagedPortfolioRow(row, columnMap)) || null;
 }
 
-function isMtmPortfolioRow(row, columnMap) {
-  if (!columnMap.source) {
-    return false;
+function resolveExistingUnrealizedPnl(row, columnMap) {
+  if (row && columnMap.unrealized_pnl && row[columnMap.unrealized_pnl] != null) {
+    return Number(row[columnMap.unrealized_pnl] || 0);
   }
 
-  return String(row[columnMap.source] || "") === "trade_journal_mtm";
+  return 0;
 }
 
 function normalizeTrackedPortfolioRows(rows, columnMap) {
@@ -376,17 +360,13 @@ function normalizeTrackedPortfolioRows(rows, columnMap) {
         return;
       }
 
-      const normalizedRow = {
+      rowsByDate.set(date, {
         date,
         capital,
-        dailyPnl: columnMap.realized_pnl ? Number(row[columnMap.realized_pnl] || 0) : 0,
+        realizedDailyPnl: columnMap.realized_pnl ? Number(row[columnMap.realized_pnl] || 0) : 0,
+        unrealizedPnl: resolveExistingUnrealizedPnl(row, columnMap),
         source: columnMap.source ? String(row[columnMap.source] || "") : "trade_journal"
-      };
-      const existing = rowsByDate.get(date);
-
-      if (!existing || isMtmPortfolioRow(row, columnMap)) {
-        rowsByDate.set(date, normalizedRow);
-      }
+      });
     });
 
   return [...rowsByDate.values()].sort((left, right) => String(left.date).localeCompare(String(right.date)));

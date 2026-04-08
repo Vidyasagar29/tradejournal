@@ -11,7 +11,7 @@ export function createEquityCurveView() {
   const chartGrid = createElement("section", "analytics-chart-grid");
   const capitalCard = createChartCard("Capital Curve");
   const benchmarkCard = createChartCard("Portfolio vs NIFTY (Indexed)");
-  const pnlCard = createChartCard("Daily Equity Change");
+  const pnlCard = createChartCard("Realized Daily P&L");
   const tableCard = createElement("section", "analytics-table-card");
   const tableTitle = createElement("h3", "", "Latest Closed Trades");
   const tableWrap = createElement("div", "analytics-table-wrap");
@@ -221,14 +221,16 @@ function renderDailyPnlChart(canvas, points) {
     return;
   }
 
+  const realizedPnlValues = points.map((point) => point.realizedDailyPnl ?? point.dailyPnl ?? 0);
+
   new window.Chart(canvas, {
     type: "bar",
     data: {
       labels: points.map((point) => point.date),
       datasets: [{
-        label: "Daily P&L",
-        data: points.map((point) => point.dailyPnl),
-        backgroundColor: points.map((point) => point.dailyPnl >= 0 ? "rgba(71, 209, 140, 0.72)" : "rgba(255, 107, 91, 0.72)"),
+        label: "Realized Daily P&L",
+        data: realizedPnlValues,
+        backgroundColor: realizedPnlValues.map((value) => value >= 0 ? "rgba(71, 209, 140, 0.72)" : "rgba(255, 107, 91, 0.72)"),
         borderRadius: 6
       }]
     },

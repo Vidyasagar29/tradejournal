@@ -54,7 +54,7 @@ function calculatePositionUnrealizedPnl(position, currentPrice) {
   return (Number(currentPrice || 0) - entryPrice) * quantity * sideMultiplier;
 }
 
-function resolvePricingInputs(position, fallbackSpotPrice, marketContext) {
+function resolvePricingInputs(position, sheetSpotPrice, marketContext) {
   const pricingConfig = window.TRADE_JOURNAL_CONFIG?.optionPricing || {};
   const optionType = String(position.optionType || "").toUpperCase();
   const sheetIv = Number(marketContext?.currentPriceIvs?.get(optionType));
@@ -72,7 +72,7 @@ function resolvePricingInputs(position, fallbackSpotPrice, marketContext) {
     : 0.1;
 
   return {
-    spotPrice: Number(fallbackSpotPrice || 0),
+    spotPrice: Number(sheetSpotPrice || 0),
     pricingIv,
     riskFreeRate
   };

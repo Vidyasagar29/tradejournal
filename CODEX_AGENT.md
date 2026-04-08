@@ -91,7 +91,6 @@ Tables include:
 * exits
 * portfolio
 * default_iv
-* market_data
 
 Do not modify schema without updating PROJECT_SPEC.md.
 

@@ -8,12 +8,7 @@ const sheetCurrentPriceIvCache = new Map();
 
 export const marketDataService = {
   async loadMarketData() {
-    const [sheetRows, databaseRows] = await Promise.all([
-      this.loadGoogleSheetMarketData(),
-      loadDatabaseMarketData()
-    ]);
-
-    return sheetRows.length > 0 ? sheetRows : databaseRows;
+    return this.loadGoogleSheetMarketData();
   },
   async loadDefaultIv() {
     try {
@@ -43,18 +38,18 @@ export const marketDataService = {
     const marketRow = matchMarketRow(position, context.marketData);
     const sheetOptionIv = resolveSheetOptionIv(position, context.currentPriceIvs);
     const defaultIv = resolveSymbolDefaultIv(position, context.defaultIvRows) ?? context.defaultIv ?? DEFAULT_IV;
-    const marketIv = pickFirstNumber([
+    const sheetIv = pickFirstNumber([
       marketRow?.iv,
       marketRow?.IV,
       marketRow?.implied_volatility,
       marketRow?.default_iv
     ]);
     const entryIv = pickFirstNumber([position.entryIv]);
-    const ivValue = pickFirstNumber([marketIv, sheetOptionIv, defaultIv, entryIv, DEFAULT_IV]);
-    const ivSource = marketIv != null
-      ? "market_data"
+    const ivValue = pickFirstNumber([sheetIv, sheetOptionIv, defaultIv, entryIv, DEFAULT_IV]);
+    const ivSource = sheetIv != null
+      ? "google_sheet"
       : sheetOptionIv != null
-        ? "market_data_named"
+        ? "google_sheet_named"
       : defaultIv != null
         ? "default_iv"
         : entryIv != null
@@ -64,9 +59,7 @@ export const marketDataService = {
       marketRow?.spot,
       marketRow?.spot_price,
       marketRow?.underlying_price,
-      context.symbolSpots?.get(normalizeValue(position.symbol)),
-      position.instrument === "Future" ? position.entryPrice : position.strike,
-      position.entryPrice
+      context.symbolSpots?.get(normalizeValue(position.symbol))
     ]);
 
     return {
@@ -76,17 +69,6 @@ export const marketDataService = {
     };
   }
 };
-
-async function loadDatabaseMarketData() {
-  try {
-    return await database.tables.market_data.list({
-      columns: "*",
-      limit: 3000
-    });
-  } catch {
-    return [];
-  }
-}
 
 marketDataService.loadGoogleSheetMarketData = async function loadGoogleSheetMarketData() {
   const csvUrl = window.TRADE_JOURNAL_CONFIG?.googleSheets?.marketDataCsvUrl?.trim();

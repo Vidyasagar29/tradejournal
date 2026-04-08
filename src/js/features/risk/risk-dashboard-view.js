@@ -149,12 +149,12 @@ function renderSummary(container, summary) {
       <strong>${formatSigned(summary.portfolioTheta)}</strong>
     </article>
     <article class="trade-summary-block risk-stat-card">
-      <span>Market IV</span>
-      <strong>${summary.marketIvCount}</strong>
+      <span>Sheet IV</span>
+      <strong>${summary.sheetIvCount}</strong>
     </article>
     <article class="trade-summary-block risk-stat-card">
-      <span>Fallback IV</span>
-      <strong>${summary.fallbackIvCount}</strong>
+      <span>Default/Entry IV</span>
+      <strong>${summary.defaultIvCount}</strong>
     </article>
   `;
 }

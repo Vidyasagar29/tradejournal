@@ -194,6 +194,11 @@ Used for:
 * equity curve
 * drawdown
 
+Portfolio P&L fields:
+
+* daily_pnl = closed-trade realised P&L for the date
+* unrealised_pnl = open-position mark-to-market P&L for the date
+
 ---
 
 # Charts
@@ -220,7 +225,6 @@ positions
 exits
 portfolio
 default_iv
-market_data
 
 ---
 

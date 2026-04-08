@@ -33,8 +33,5 @@ window.TRADE_JOURNAL_CONFIG = window.TRADE_JOURNAL_CONFIG || {
       hour: 15,
       minute: 30
     }
-  },
-  tradeColumnMap: {
-    instrument_type: "instrument"
   }
 };

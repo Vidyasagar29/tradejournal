@@ -42,8 +42,8 @@ export async function getRiskDashboardSnapshot() {
     openCount: rows.length,
     portfolioDelta: rows.reduce((total, row) => total + row.delta, 0),
     portfolioTheta: rows.reduce((total, row) => total + row.theta, 0),
-    marketIvCount: rows.filter((row) => row.ivSource.startsWith("market_data")).length,
-    fallbackIvCount: rows.filter((row) => !row.ivSource.startsWith("market_data")).length
+    sheetIvCount: rows.filter((row) => row.ivSource.startsWith("google_sheet")).length,
+    defaultIvCount: rows.filter((row) => !row.ivSource.startsWith("google_sheet")).length
   };
 
   const bySymbol = [...rows.reduce((map, row) => {

@@ -4,14 +4,15 @@ const DEFAULT_MARKET_CLOSE_UTC_HOUR = 10;
 const DEFAULT_MARKET_CLOSE_UTC_MINUTE = 5;
 const DEFAULT_MARKET_TIMEZONE = "Asia/Kolkata";
 const SNAPSHOT_TOLERANCE = 0.01;
-const PORTFOLIO_COLUMN_CANDIDATES = {
-  id: ["id"],
-  date: ["portfolio_date", "date", "as_of_date", "entry_date", "snapshot_date"],
-  capital: ["capital", "ending_capital", "balance", "equity"],
-  realizedPnl: ["realized_pnl", "pnl", "daily_pnl", "profit_loss"],
-  source: ["source", "origin"],
-  closedCount: ["closed_count", "trade_count", "closed_trades"],
-  niftyClose: ["nifty_close", "benchmark_close", "nifty", "close"]
+const PORTFOLIO_COLUMN_MAP = {
+  id: "id",
+  date: "date",
+  capital: "capital",
+  realizedPnl: "daily_pnl",
+  unrealizedPnl: "unrealised_pnl",
+  source: "source",
+  closedCount: null,
+  niftyClose: "nifty_close"
 };
 
 async function main() {
@@ -30,7 +31,7 @@ async function main() {
     loadMarketSheet(config.marketDataCsvUrl)
   ]);
 
-  const portfolioColumnMap = await resolvePortfolioColumnMap(config);
+  const portfolioColumnMap = await resolvePortfolioColumnMap();
   validatePortfolioColumnMap(portfolioColumnMap);
 
   const openTradeRows = buildOpenTradeRows(trades, positions);
@@ -39,6 +40,9 @@ async function main() {
   const latestRealizedCapital = resolveLatestRealizedCapital(portfolioRows, portfolioColumnMap, snapshotDate);
   const niftyClose = toNumeric(marketSheet.namedCells.get("NIFTY_50"));
   const mtmCapital = latestRealizedCapital + totalUnrealizedPnl;
+  const existingTodayRow = findExistingSnapshot(portfolioRows, portfolioColumnMap, snapshotDate);
+  const realizedPnl = resolveExistingRealizedPnl(existingTodayRow, portfolioColumnMap);
+  const closedCount = resolveExistingClosedCount(existingTodayRow, portfolioColumnMap);
   validateSnapshotMath({
     latestRealizedCapital,
     totalUnrealizedPnl,
@@ -48,11 +52,12 @@ async function main() {
   const snapshotPayload = mapPortfolioPayload({
     date: snapshotDate,
     capital: mtmCapital,
-    realizedPnl: totalUnrealizedPnl,
+    realizedPnl,
+    unrealizedPnl: totalUnrealizedPnl,
+    closedCount,
     niftyClose,
-    source: "trade_journal_mtm"
+    source: "trade_journal"
   }, portfolioColumnMap);
-  const existingTodayRow = findExistingSnapshot(portfolioRows, portfolioColumnMap, snapshotDate, "trade_journal_mtm");
 
   if (existingTodayRow) {
     await updatePortfolioRow(config, portfolioColumnMap, existingTodayRow, snapshotPayload);
@@ -116,42 +121,13 @@ async function fetchTable(config, tableName) {
   return response.json();
 }
 
-async function resolvePortfolioColumnMap(config) {
-  const entries = await Promise.all(
-    Object.entries(PORTFOLIO_COLUMN_CANDIDATES).map(async ([logicalField, candidates]) => {
-      for (const candidate of candidates) {
-        const exists = await doesPortfolioColumnExist(config, candidate);
-
-        if (exists) {
-          return [logicalField, candidate];
-        }
-      }
-
-      return [logicalField, null];
-    })
-  );
-
-  return Object.fromEntries(entries);
-}
-
-async function doesPortfolioColumnExist(config, columnName) {
-  const response = await supabaseRequest(config, `portfolio?select=${encodeURIComponent(columnName)}&limit=1`, {
-    method: "GET"
-  });
-
-  if (response.ok) {
-    return true;
-  }
-
-  const errorBody = await safeJson(response);
-  const message = String(errorBody?.message || "").toLowerCase();
-  return !(message.includes("could not find the") && message.includes("column"))
-    && !(message.includes("does not exist") && message.includes("column"));
+async function resolvePortfolioColumnMap() {
+  return { ...PORTFOLIO_COLUMN_MAP };
 }
 
 function validatePortfolioColumnMap(columnMap) {
-  if (!columnMap.date || !columnMap.capital || !columnMap.source) {
-    throw new Error("Portfolio table must expose compatible date, capital, and source columns for automated snapshots.");
+  if (!columnMap.date || !columnMap.capital || !columnMap.source || !columnMap.unrealizedPnl) {
+    throw new Error("Portfolio table must expose compatible date, capital, source, and unrealised_pnl columns for automated snapshots.");
   }
 }
 
@@ -171,7 +147,7 @@ function buildOpenTradeRows(trades, positions) {
         tradeId: trade.id,
         symbol: trade.symbol || "-",
         action: trade.action || "-",
-        instrument: trade.instrument || trade.instrument_type || "-",
+        instrument: trade.instrument || "-",
         expiry: trade.expiry || "-",
         strike: trade.strike ?? "-",
         optionType: trade.option_type || "-",
@@ -215,7 +191,7 @@ function resolveSpotPrice(trade, marketSheet) {
   }
 
   const matchedRow = findExactMarketRow(trade, marketSheet.rows);
-  return toNumeric(matchedRow?.spot || trade.strike || trade.entryPrice);
+  return toNumeric(matchedRow?.spot);
 }
 
 function resolvePricingIv(trade, marketSheet) {
@@ -347,10 +323,10 @@ async function loadMarketSheet(csvUrl) {
 
 function resolveLatestRealizedCapital(rows, columnMap, snapshotDate) {
   const realizedRows = rows
-    .filter((row) => isRealizedRow(row, columnMap))
+    .filter((row) => isManagedRow(row, columnMap))
     .map((row) => ({
       date: normalizeTradingDate(row[columnMap.date]),
-      capital: toNumeric(row[columnMap.capital])
+      capital: resolveRealizedCapital(row, columnMap)
     }))
     .filter((row) => row.date && row.capital > 0 && row.date <= snapshotDate)
     .sort((left, right) => String(left.date).localeCompare(String(right.date)));
@@ -381,9 +357,9 @@ function validateSnapshotMath({ latestRealizedCapital, totalUnrealizedPnl, mtmCa
   }
 }
 
-function findExistingSnapshot(rows, columnMap, date, sourceValue) {
+function findExistingSnapshot(rows, columnMap, date) {
   return rows.find((row) => {
-    return row[columnMap.date] === date && String(row[columnMap.source] || "") === sourceValue;
+    return row[columnMap.date] === date && isManagedRow(row, columnMap);
   }) || null;
 }
 
@@ -430,12 +406,16 @@ function mapPortfolioPayload(point, columnMap) {
     [columnMap.source]: point.source
   };
 
-  if (columnMap.realizedPnl) {
+  if (columnMap.realizedPnl && typeof point.realizedPnl !== "undefined") {
     payload[columnMap.realizedPnl] = point.realizedPnl;
   }
 
+  if (columnMap.unrealizedPnl && typeof point.unrealizedPnl !== "undefined") {
+    payload[columnMap.unrealizedPnl] = point.unrealizedPnl;
+  }
+
   if (columnMap.closedCount) {
-    payload[columnMap.closedCount] = 0;
+    payload[columnMap.closedCount] = point.closedCount;
   }
 
   if (columnMap.niftyClose) {
@@ -445,13 +425,36 @@ function mapPortfolioPayload(point, columnMap) {
   return payload;
 }
 
-function isRealizedRow(row, columnMap) {
+function isManagedRow(row, columnMap) {
   if (!columnMap.source) {
     return true;
   }
 
   const source = String(row[columnMap.source] || "").trim();
-  return source === "" || source === "trade_journal" || source === "trade_journal_realized";
+  return source === "trade_journal";
+}
+
+function resolveRealizedCapital(row, columnMap) {
+  const capital = toNumeric(row[columnMap.capital]);
+  const unrealizedPnl = columnMap.unrealizedPnl ? toNumeric(row[columnMap.unrealizedPnl]) : 0;
+
+  return capital - unrealizedPnl;
+}
+
+function resolveExistingRealizedPnl(row, columnMap) {
+  if (!row || !columnMap.realizedPnl) {
+    return 0;
+  }
+
+  return toNumeric(row[columnMap.realizedPnl]);
+}
+
+function resolveExistingClosedCount(row, columnMap) {
+  if (!row || !columnMap.closedCount) {
+    return 0;
+  }
+
+  return toNumeric(row[columnMap.closedCount]);
 }
 
 async function supabaseRequest(config, path, options = {}) {
