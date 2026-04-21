@@ -23,11 +23,33 @@ export function createAppShell({ root, routes, store, auth }) {
   appShell.append(authShell, appFrame);
   root.appendChild(appShell);
 
-  function renderView(route) {
+  let renderToken = 0;
+
+  async function renderView(route) {
+    const nextToken = renderToken + 1;
+    renderToken = nextToken;
     topbar.update(route);
     sidebar.update(route.id);
     clearElement(contentView);
-    contentView.appendChild(route.view(route));
+    contentView.appendChild(createRouteLoadingView(route));
+
+    try {
+      const viewFactory = await route.loadView();
+
+      if (renderToken !== nextToken) {
+        return;
+      }
+
+      clearElement(contentView);
+      contentView.appendChild(viewFactory(route));
+    } catch (error) {
+      if (renderToken !== nextToken) {
+        return;
+      }
+
+      clearElement(contentView);
+      contentView.appendChild(createRouteErrorView(route, error));
+    }
   }
 
   return {
@@ -44,6 +66,26 @@ export function createAppShell({ root, routes, store, auth }) {
       topbar.setSession(session);
     }
   };
+}
+
+function createRouteLoadingView(route) {
+  const wrapper = createElement("section", "panel-card auth-card");
+  const title = createElement("h3", "", `Loading ${route.label}...`);
+  const text = createElement("p", "", "Preparing this tab first. Other tabs can load quietly after the first view is ready.");
+  wrapper.append(title, text);
+  return wrapper;
+}
+
+function createRouteErrorView(route, error) {
+  const wrapper = createElement("section", "panel-card auth-card");
+  const title = createElement("h3", "", `Unable to load ${route.label}`);
+  const text = createElement(
+    "p",
+    "",
+    error instanceof Error ? error.message : "An unknown error occurred while loading this section."
+  );
+  wrapper.append(title, text);
+  return wrapper;
 }
 
 function createTopbar(auth) {

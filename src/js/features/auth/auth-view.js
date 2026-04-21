@@ -32,13 +32,17 @@ export function createAuthView({ onSubmit, isConfigured }) {
     placeholder: "Enter your password",
     required: true
   });
+  const passwordToggle = createElement("button", "button-secondary auth-password-toggle", "Show");
   const submitButton = createElement("button", "button-primary", "Sign In");
 
   form.className = "trade-entry-form auth-form";
   form.noValidate = true;
+  passwordToggle.type = "button";
   submitButton.type = "submit";
   submitButton.disabled = !isConfigured;
 
+  passwordField.wrapper.classList.add("auth-password-field");
+  passwordField.wrapper.appendChild(passwordToggle);
   copy.append(title, description);
   brand.append(mark, copy);
   grid.append(emailField.wrapper, passwordField.wrapper);
@@ -46,6 +50,12 @@ export function createAuthView({ onSubmit, isConfigured }) {
   form.append(grid, actions);
   card.append(brand, statusBanner, form);
   wrapper.appendChild(card);
+
+  passwordToggle.addEventListener("click", () => {
+    const shouldShowPassword = passwordField.input.type === "password";
+    passwordField.input.type = shouldShowPassword ? "text" : "password";
+    passwordToggle.textContent = shouldShowPassword ? "Hide" : "Show";
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

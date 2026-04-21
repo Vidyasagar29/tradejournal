@@ -411,6 +411,24 @@
   font-size: 0.96rem;
 }
 
+.auth-password-field {
+  position: relative;
+}
+
+.auth-password-field input {
+  padding-right: 72px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  min-width: 56px;
+  padding: 4px 8px;
+  text-transform: none;
+  font-size: 0.7rem;
+}
+
 .auth-brand {
   display: flex;
   align-items: center;

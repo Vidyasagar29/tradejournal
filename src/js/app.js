@@ -1,7 +1,7 @@
 import { createAppShell } from "./ui/shell.js";
 import { createRouter } from "./core/router.js";
 import { createStore } from "./core/state.js";
-import { routes } from "./routes.js";
+import { preloadRemainingRouteViews, routes } from "./routes.js";
 import { createAuthView } from "./features/auth/auth-view.js";
 import {
   getCurrentSession,
@@ -39,8 +39,18 @@ const router = createRouter({
 
 let authInitialized = false;
 let routerStarted = false;
+let renderedSessionToken = "__signed_out__";
+let routePreloadStarted = false;
 
 store.subscribe((nextState) => {
+  const nextSessionToken = nextState.authSession?.access_token || "__signed_out__";
+
+  if (nextSessionToken === renderedSessionToken) {
+    return;
+  }
+
+  renderedSessionToken = nextSessionToken;
+
   if (nextState.authSession) {
     shell.showApp(nextState.authSession);
 
@@ -51,13 +61,19 @@ store.subscribe((nextState) => {
 
       router.start();
       routerStarted = true;
-    } else {
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
+
+    if (!routePreloadStarted) {
+      routePreloadStarted = true;
+      window.setTimeout(() => {
+        preloadRemainingRouteViews(nextState.activeRoute || "trade-entry");
+      }, 0);
     }
 
     return;
   }
 
+  window.location.hash = "";
   shell.showAuth(buildAuthView());
 });
 
