@@ -106,7 +106,16 @@ function buildAuthView() {
     isConfigured: isSupabaseConfigured(),
     onSubmit: async (credentials) => {
       try {
-        await signInWithPassword(credentials);
+        const session = await signInWithPassword(credentials);
+
+        if (!session) {
+          return {
+            ok: false,
+            message: "Sign-in succeeded but no session was returned. Check Supabase Auth settings."
+          };
+        }
+
+        store.setState({ authSession: session });
         return { ok: true };
       } catch (error) {
         return {
