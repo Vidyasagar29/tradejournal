@@ -27,14 +27,12 @@ export async function updateTradeRecord({ tradeId, updates, exits = [], mode = "
   }
 
   const oldStrategy = {
-    strategy_id: currentTrade.strategy_id ?? null,
-    strategy_name: String(currentTrade.strategy_name || "").trim()
+    strategy_id: currentTrade.strategy_id ?? null
   };
   const schemaPayload = await mapTradePayloadToSchema(logicalPayload);
+  await applyStrategyUpdate(schemaPayload, logicalPayload);
   const rows = await tradeRepository.updateTrade({ id: tradeId }, schemaPayload);
   const updatedTrade = rows[0] || currentTrade;
-
-  await syncStrategyReference(updatedTrade);
   await cleanupOrphanedStrategyReference(oldStrategy, updatedTrade);
 
   return {
@@ -254,6 +252,18 @@ export async function syncClosedTradeExits(tradeId, currentExits, nextExits) {
   }
 }
 
+async function applyStrategyUpdate(schemaPayload, logicalPayload) {
+  const strategyIdSupported = await tradeTableHasColumn("strategy_id");
+
+  if (!strategyIdSupported || !Object.hasOwn(logicalPayload, "strategy_name")) {
+    return;
+  }
+
+  const strategy = await ensureStrategy(logicalPayload.strategy_name);
+  schemaPayload.strategy_id = strategy?.id ?? null;
+  delete schemaPayload.strategy_name;
+}
+
 function validateQuantityUpdate(quantity, mode, currentExits, normalizedExits) {
   const exitedQty = currentExits.reduce((total, row) => total + Number(row.qty || 0), 0);
 
@@ -283,7 +293,7 @@ async function ensureStrategy(strategyName) {
     return null;
   }
 
-  const existingStrategy = await strategyRepository.findByName(normalizedName);
+  const existingStrategy = await strategyRepository.findByNormalizedName(normalizedName);
 
   if (existingStrategy) {
     return existingStrategy;
@@ -292,53 +302,21 @@ async function ensureStrategy(strategyName) {
   return strategyRepository.createStrategy(normalizedName);
 }
 
-async function syncStrategyReference(trade) {
-  const strategyIdSupported = await tradeTableHasColumn("strategy_id");
-
-  if (!strategyIdSupported || !String(trade?.strategy_name || "").trim()) {
-    return;
-  }
-
-  const strategy = await ensureStrategy(trade.strategy_name);
-
-  if (strategy?.id && trade.strategy_id !== strategy.id) {
-    await tradeRepository.updateTrade({ id: trade.id }, { strategy_id: strategy.id });
-    trade.strategy_id = strategy.id;
-  }
-}
-
 async function cleanupOrphanedStrategyReference(previousTrade, nextTrade) {
   const previousStrategyId = previousTrade?.strategy_id ?? null;
-  const previousStrategyName = String(previousTrade?.strategy_name || "").trim();
   const nextStrategyId = nextTrade?.strategy_id ?? null;
-  const nextStrategyName = String(nextTrade?.strategy_name || "").trim();
-  const strategyChanged = previousStrategyId !== nextStrategyId || previousStrategyName !== nextStrategyName;
+  const strategyChanged = previousStrategyId !== nextStrategyId;
 
-  if (!strategyChanged || (!previousStrategyId && !previousStrategyName)) {
+  if (!strategyChanged || !previousStrategyId) {
     return;
   }
 
   const remainingTrades = await tradeRepository.listTrades({ limit: 3000 });
-  const stillInUse = remainingTrades.some((row) => {
-    const rowStrategyName = String(row.strategy_name || "").trim();
-    return (previousStrategyId && row.strategy_id === previousStrategyId)
-      || (previousStrategyName && rowStrategyName === previousStrategyName);
-  });
+  const stillInUse = remainingTrades.some((row) => previousStrategyId && row.strategy_id === previousStrategyId);
 
   if (stillInUse) {
     return;
   }
 
-  if (previousStrategyId) {
-    await strategyRepository.deleteStrategy({ id: previousStrategyId });
-    return;
-  }
-
-  if (previousStrategyName) {
-    const previousStrategy = await strategyRepository.findByName(previousStrategyName);
-
-    if (previousStrategy?.id) {
-      await strategyRepository.deleteStrategy({ id: previousStrategy.id });
-    }
-  }
+  await strategyRepository.deleteStrategy({ id: previousStrategyId });
 }

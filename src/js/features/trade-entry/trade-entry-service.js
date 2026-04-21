@@ -32,6 +32,16 @@ export function getTradeTagOptions() {
   return [...DEFAULT_TAGS];
 }
 
+export async function getStrategyNameOptions() {
+  const strategies = await strategyRepository.listStrategies();
+
+  return [...new Set(
+    strategies
+      .map((strategy) => String(strategy.strategy_name || "").trim())
+      .filter(Boolean)
+  )].sort((left, right) => left.localeCompare(right));
+}
+
 export function generateTradeId() {
   const now = new Date();
   const stamp = [
@@ -173,6 +183,8 @@ async function prepareTradeInsertPayload(payload) {
     schemaPayload.strategy_id = strategy.id;
   }
 
+  delete schemaPayload.strategy_name;
+
   return schemaPayload;
 }
 
@@ -183,7 +195,7 @@ async function ensureStrategy(strategyName) {
     throw new Error("Strategy Name is required.");
   }
 
-  const existingStrategy = await strategyRepository.findByName(normalizedName);
+  const existingStrategy = await strategyRepository.findByNormalizedName(normalizedName);
 
   if (existingStrategy) {
     return existingStrategy;

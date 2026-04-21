@@ -42,6 +42,7 @@ export function createOpenPositionsView() {
       <th>Strategy</th>
       <th>Side</th>
       <th>Symbol</th>
+      <th>Entry Date</th>
       <th>Expiry</th>
       <th>Strike</th>
       <th>Type</th>
@@ -81,7 +82,7 @@ export function createOpenPositionsView() {
       setBanner(statusBanner, message, "error");
       tableBody.innerHTML = `
         <tr>
-          <td colspan="13" class="positions-empty">${escapeHtml(message)}</td>
+          <td colspan="14" class="positions-empty">${escapeHtml(message)}</td>
         </tr>
       `;
     }
@@ -109,7 +110,7 @@ function renderTable(positions, tableBody, statusBanner, modal, reload) {
   if (positions.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="13" class="positions-empty">No open positions found.</td>
+        <td colspan="14" class="positions-empty">No open positions found.</td>
       </tr>
     `;
     return;
@@ -118,10 +119,10 @@ function renderTable(positions, tableBody, statusBanner, modal, reload) {
   const groupedPositions = groupPositionsForDisplay(positions);
 
   groupedPositions.forEach((strategyGroup) => {
-    tableBody.appendChild(createGroupRow("positions-strategy-row", strategyGroup.label, 13));
+    tableBody.appendChild(createGroupRow("positions-strategy-row", strategyGroup.label, 14));
 
     strategyGroup.instrumentGroups.forEach((instrumentGroup) => {
-      tableBody.appendChild(createGroupRow("positions-instrument-row", instrumentGroup.label, 13));
+      tableBody.appendChild(createGroupRow("positions-instrument-row", instrumentGroup.label, 14));
 
       instrumentGroup.positions.forEach((position) => {
         tableBody.appendChild(createPositionRow(position, statusBanner, modal, reload));
@@ -458,6 +459,7 @@ function createPositionRow(position, statusBanner, modal, reload) {
     <td>${escapeHtml(position.strategyName)}</td>
     <td><span class="positions-side-badge ${getSideTone(position.action)}">${escapeHtml(position.action || "-")}</span></td>
     <td>${escapeHtml(position.symbol)}</td>
+    <td>${escapeHtml(position.tradeDate)}</td>
     <td>${escapeHtml(position.expiry)}</td>
     <td>${formatValue(position.strike)}</td>
     <td>${escapeHtml(getInstrumentLabel(position))}</td>

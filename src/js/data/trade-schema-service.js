@@ -1,6 +1,5 @@
 const TRADE_COLUMN_MAP = {
   trade_id: "trade_id",
-  strategy_name: "strategy_name",
   action: "action",
   trade_date: "trade_date",
   symbol: "symbol",

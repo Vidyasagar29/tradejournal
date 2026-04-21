@@ -2,6 +2,7 @@ import { createElement } from "../../core/dom.js";
 import {
   generateTradeId,
   getTradeEntryDefaults,
+  getStrategyNameOptions,
   getTradeTagOptions,
   submitTradeEntry
 } from "./trade-entry-service.js";
@@ -17,6 +18,7 @@ export function createTradeEntryView() {
   const actions = createElement("div", "trade-form-actions");
   const saveButton = createElement("button", "button-primary", "Save Trade");
   const resetButton = createElement("button", "button-secondary", "Reset Form");
+  const strategyListId = "trade-entry-strategy-list";
   const tradeIdInput = createField({
     label: "Trade ID",
     name: "tradeId",
@@ -30,7 +32,15 @@ export function createTradeEntryView() {
   statusBanner.textContent = "Ready to capture a new trade. Fill the required fields and save to Supabase.";
 
   const fields = [
-    createField({ label: "Strategy Name", name: "strategyName", type: "text", value: defaults.strategyName, required: true, placeholder: "Hedge / Directional / Volatility" }),
+    createField({
+      label: "Strategy Name",
+      name: "strategyName",
+      type: "text",
+      value: defaults.strategyName,
+      required: true,
+      placeholder: "Hedge / Directional / Volatility",
+      list: strategyListId
+    }),
     createSelectField({ label: "Action", name: "action", value: defaults.action, options: ["Long", "Short"] }),
     createField({ label: "Trade Date", name: "tradeDate", type: "date", value: defaults.tradeDate, required: true }),
     createSelectField({ label: "Instrument Type", name: "instrumentType", value: defaults.instrumentType, options: ["Option", "Future"] }),
@@ -108,6 +118,7 @@ export function createTradeEntryView() {
   formCard.append(sectionHeader, statusBanner, form);
   wrapper.append(formCard);
   syncInstrumentState(form);
+  loadStrategySuggestions(fieldMap.strategyName, strategyListId, statusBanner);
 
   return wrapper;
 }
@@ -122,7 +133,7 @@ function createSectionHeader() {
   return header;
 }
 
-function createField({ label, name, type, value = "", placeholder = "", helper = "", required = false, readOnly = false, min = "", step = "" }) {
+function createField({ label, name, type, value = "", placeholder = "", helper = "", required = false, readOnly = false, min = "", step = "", list = "" }) {
   const wrapper = createElement("label", "trade-field");
   const labelText = createElement("span", "trade-label", label);
   const input = document.createElement("input");
@@ -143,6 +154,10 @@ function createField({ label, name, type, value = "", placeholder = "", helper =
     input.step = step;
   }
 
+  if (list) {
+    input.setAttribute("list", list);
+  }
+
   wrapper.append(labelText, input);
 
   if (helperText) {
@@ -150,6 +165,24 @@ function createField({ label, name, type, value = "", placeholder = "", helper =
   }
 
   return { wrapper, input, name };
+}
+
+async function loadStrategySuggestions(input, listId, statusBanner) {
+  try {
+    const strategyNames = await getStrategyNameOptions();
+    const dataList = document.createElement("datalist");
+    dataList.id = listId;
+
+    strategyNames.forEach((strategyName) => {
+      const option = document.createElement("option");
+      option.value = strategyName;
+      dataList.appendChild(option);
+    });
+
+    input.parentElement?.appendChild(dataList);
+  } catch {
+    setStatus(statusBanner, "Strategy suggestions are unavailable right now. You can still type a new strategy name.", "warning");
+  }
 }
 
 function createSelectField({ label, name, value = "", options, placeholder = "" }) {

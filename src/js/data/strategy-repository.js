@@ -17,6 +17,16 @@ export const strategyRepository = {
 
     return matches[0] || null;
   },
+  async findByNormalizedName(strategyName) {
+    const normalizedName = normalizeStrategyName(strategyName);
+
+    if (!normalizedName) {
+      return null;
+    }
+
+    const strategies = await this.listStrategies();
+    return strategies.find((strategy) => normalizeStrategyName(strategy.strategy_name) === normalizedName) || null;
+  },
   async createStrategy(strategyName) {
     const records = await database.tables.strategies.insert({
       strategy_name: strategyName
@@ -29,3 +39,10 @@ export const strategyRepository = {
     return rows[0] || null;
   }
 };
+
+function normalizeStrategyName(value) {
+  return String(value ?? "")
+    .trim()
+    .replaceAll(/\s+/g, " ")
+    .toLowerCase();
+}

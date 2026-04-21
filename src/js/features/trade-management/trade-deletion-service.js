@@ -26,33 +26,17 @@ export async function deleteTradeWithDependencies({ positionId, tradeId }) {
 
 async function cleanupOrphanedStrategy(trade) {
   const strategyId = trade?.strategy_id ?? null;
-  const strategyName = String(trade?.strategy_name || "").trim();
 
-  if (!strategyId && !strategyName) {
+  if (!strategyId) {
     return;
   }
 
   const remainingTrades = await tradeRepository.listTrades({ limit: 3000 });
-  const stillInUse = remainingTrades.some((row) => {
-    const rowStrategyName = String(row.strategy_name || "").trim();
-    return (strategyId && row.strategy_id === strategyId)
-      || (strategyName && rowStrategyName === strategyName);
-  });
+  const stillInUse = remainingTrades.some((row) => strategyId && row.strategy_id === strategyId);
 
   if (stillInUse) {
     return;
   }
 
-  if (strategyId) {
-    await strategyRepository.deleteStrategy({ id: strategyId });
-    return;
-  }
-
-  if (strategyName) {
-    const existingStrategy = await strategyRepository.findByName(strategyName);
-
-    if (existingStrategy?.id) {
-      await strategyRepository.deleteStrategy({ id: existingStrategy.id });
-    }
-  }
+  await strategyRepository.deleteStrategy({ id: strategyId });
 }

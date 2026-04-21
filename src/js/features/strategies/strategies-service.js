@@ -98,8 +98,7 @@ function buildStrategyGroups(strategies, trades) {
 
   trades.forEach((trade) => {
     const strategy = trade.strategy_id ? strategyIdMap.get(trade.strategy_id) : null;
-    const fallbackName = String(trade.strategy_name || "").trim();
-    const strategyName = strategy?.strategy_name || fallbackName || "Unassigned";
+    const strategyName = strategy?.strategy_name || "Unassigned";
     const key = strategy?.id ? `id:${strategy.id}` : `name:${strategyName.toLowerCase()}`;
     const existing = groups.get(key) || {
       id: strategy?.id || null,
