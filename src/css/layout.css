@@ -73,6 +73,16 @@
   min-width: 0;
 }
 
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(255, 157, 30, 0.1), transparent 30%),
+    var(--bg-app);
+}
+
 @media (max-width: 1100px) {
   .app-frame {
     grid-template-columns: 1fr;

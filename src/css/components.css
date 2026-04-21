@@ -392,6 +392,44 @@
   color: var(--negative);
 }
 
+.auth-layout {
+  width: min(100%, 520px);
+}
+
+.auth-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.auth-copy h2,
+.auth-copy p {
+  margin: 0;
+}
+
+.auth-copy h2 {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.auth-copy p {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 @media (max-width: 720px) {
   .topbar-rail {
     flex-direction: column;

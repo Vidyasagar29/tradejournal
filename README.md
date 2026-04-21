@@ -26,3 +26,13 @@ Development is guided by Codex Agent instructions.
 The repository includes a GitHub Actions workflow at `.github/workflows/daily-portfolio-snapshot.yml`.
 
 It runs on weekday schedule and can also be triggered manually to save an end-of-day open-position MTM snapshot into Supabase.
+
+## Secure Access
+
+The app now supports Supabase Auth sign-in in the browser.
+
+To actually protect the dashboard, also enable Supabase RLS policies.
+
+Setup guide:
+
+* [SUPABASE_AUTH_SETUP.md](./SUPABASE_AUTH_SETUP.md)

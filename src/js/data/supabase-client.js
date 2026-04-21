@@ -36,8 +36,8 @@ export function getSupabaseClient() {
   cachedConfig = config;
   cachedClient = window.supabase.createClient(config.url, config.anonKey, {
     auth: {
-      persistSession: false,
-      autoRefreshToken: false
+      persistSession: true,
+      autoRefreshToken: true
     }
   });
 
