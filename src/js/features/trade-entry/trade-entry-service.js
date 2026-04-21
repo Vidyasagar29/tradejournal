@@ -174,10 +174,6 @@ async function prepareTradeInsertPayload(payload) {
   const schemaPayload = await mapTradePayloadToSchema(payload);
   const strategyIdSupported = await tradeTableHasColumn("strategy_id");
 
-  if (!schemaPayload.trade_id && !schemaPayload.tradeid && !schemaPayload.tradeId) {
-    delete schemaPayload.trade_id;
-  }
-
   if (strategyIdSupported) {
     const strategy = await ensureStrategy(payload.strategy_name);
     schemaPayload.strategy_id = strategy.id;
