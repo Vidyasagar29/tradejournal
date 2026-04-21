@@ -223,6 +223,8 @@ function populateFilterOptions(filters, positions) {
 }
 
 function renderSummary(container, summary) {
+  const realizedPnlClass = summary.totalRealizedPnl >= 0 ? "value-positive" : "value-negative";
+
   container.innerHTML = `
     <article class="trade-summary-block closed-stat-card">
       <span>Closed Trades</span>
@@ -242,7 +244,7 @@ function renderSummary(container, summary) {
     </article>
     <article class="trade-summary-block closed-stat-card">
       <span>Realized P&L</span>
-      <strong>${formatSigned(summary.totalRealizedPnl)}</strong>
+      <strong class="${realizedPnlClass}">${formatSigned(summary.totalRealizedPnl)}</strong>
     </article>
     <article class="trade-summary-block closed-stat-card">
       <span>Win Rate</span>
@@ -411,7 +413,7 @@ function openModal(position, modal, reload, statusBanner) {
     <span>Exit <strong>${escapeHtml(position.lastExitDate)}</strong></span>
     <span>Expiry <strong>${escapeHtml(position.expiry)}</strong></span>
     <span>Strike <strong>${escapeHtml(position.strike)}</strong></span>
-    <span>P&L <strong>${formatSigned(position.realizedPnl)}</strong></span>
+    <span class="${position.realizedPnl >= 0 ? "is-positive" : "is-negative"}">P&L <strong>${formatSigned(position.realizedPnl)}</strong></span>
   `;
 
   tradeColumns.innerHTML = `

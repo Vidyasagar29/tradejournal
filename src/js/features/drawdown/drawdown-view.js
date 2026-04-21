@@ -76,6 +76,7 @@ function createChartCard(titleText) {
 
 function renderSummary(container, summary, drawdown) {
   const latest = drawdown.at(-1) || { drawdownPercent: 0 };
+  const realizedPnlClass = summary.totalRealizedPnl >= 0 ? "value-positive" : "value-negative";
 
   container.innerHTML = `
     <article class="trade-summary-block analytics-stat-card">
@@ -92,7 +93,7 @@ function renderSummary(container, summary, drawdown) {
     </article>
     <article class="trade-summary-block analytics-stat-card">
       <span>Realized P&L</span>
-      <strong>${formatSigned(summary.totalRealizedPnl)}</strong>
+      <strong class="${realizedPnlClass}">${formatSigned(summary.totalRealizedPnl)}</strong>
     </article>
   `;
 }

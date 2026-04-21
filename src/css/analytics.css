@@ -131,6 +131,14 @@
   font-weight: 700;
 }
 
+.analytics-stat-card .value-positive {
+  color: var(--positive) !important;
+}
+
+.analytics-stat-card .value-negative {
+  color: var(--negative) !important;
+}
+
 @media (max-width: 980px) {
   .analytics-summary-grid,
   .analytics-chart-grid {

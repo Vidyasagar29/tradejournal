@@ -39,6 +39,20 @@ export async function getStrategySnapshot() {
       const position = positionMap.get(trade.id);
       return total + Number(position?.remaining_qty || 0) * Number(trade.entry_price || 0);
     }, 0);
+    const totalProfitMade = strategyTrades.reduce((total, trade) => {
+      const entryPrice = Number(trade.entry_price || 0);
+      const rows = exitMap.get(trade.id) || [];
+
+      return total + rows.reduce((tradeTotal, row) => {
+        const exitQty = Number(row.qty || 0);
+        const exitPrice = Number(row.exit_price || 0);
+        const realizedPnl = trade.action === "Short"
+          ? (entryPrice - exitPrice) * exitQty
+          : (exitPrice - entryPrice) * exitQty;
+
+        return tradeTotal + realizedPnl;
+      }, 0);
+    }, 0);
     const lastTradeDate = strategyTrades
       .map((trade) => trade.trade_date)
       .filter(Boolean)
@@ -55,6 +69,7 @@ export async function getStrategySnapshot() {
       remainingQty,
       exitedQty,
       openValue,
+      totalProfitMade,
       symbols,
       lastTradeDate,
       trades: strategyTrades

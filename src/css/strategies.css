@@ -75,6 +75,16 @@
   font-size: 0.68rem;
 }
 
+.strategies-pnl-positive {
+  color: var(--positive);
+  font-weight: 700;
+}
+
+.strategies-pnl-negative {
+  color: var(--negative);
+  font-weight: 700;
+}
+
 .strategies-modal-overlay {
   position: fixed;
   inset: 0;

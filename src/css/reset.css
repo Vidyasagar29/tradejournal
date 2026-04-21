@@ -7,6 +7,8 @@
 html {
   scroll-behavior: auto;
   overscroll-behavior-y: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 157, 30, 0.38) rgba(255, 255, 255, 0.03);
 }
 
 body {
@@ -23,6 +25,31 @@ body {
     radial-gradient(circle at top left, rgba(39, 193, 184, 0.12), transparent 20%),
     linear-gradient(180deg, #08101a 0%, var(--bg-canvas) 100%);
   background-size: 24px 24px, 24px 24px, auto, auto, auto;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 157, 30, 0.38) rgba(255, 255, 255, 0.03);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 157, 30, 0.38), rgba(39, 193, 184, 0.28));
+  border-radius: 999px;
+  border: 2px solid rgba(9, 15, 24, 0.88);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 157, 30, 0.52), rgba(39, 193, 184, 0.4));
 }
 
 button,

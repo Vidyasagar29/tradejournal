@@ -132,6 +132,8 @@ function renderTable(positions, tableBody, statusBanner, modal, reload) {
 }
 
 function renderSummary(container, summary) {
+  const openPnlClass = summary.totalUnrealizedPnl >= 0 ? "value-positive" : "value-negative";
+
   container.innerHTML = `
     <article class="trade-summary-block positions-stat-card">
       <span>Open Positions</span>
@@ -143,7 +145,7 @@ function renderSummary(container, summary) {
     </article>
     <article class="trade-summary-block positions-stat-card">
       <span>Open P&amp;L</span>
-      <strong>${formatSigned(summary.totalUnrealizedPnl)}</strong>
+      <strong class="${openPnlClass}">${formatSigned(summary.totalUnrealizedPnl)}</strong>
     </article>
   `;
 }

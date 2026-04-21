@@ -9,15 +9,15 @@
   display: grid;
   gap: 8px;
   padding: 10px;
-  width: min(980px, 100%);
-  justify-items: start;
+  width: 100%;
+  justify-items: stretch;
 }
 
 .closed-summary-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
-  width: min(980px, 100%);
+  width: 100%;
 }
 
 .closed-stat-card {
@@ -29,7 +29,7 @@
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 4px;
-  width: min(980px, 100%);
+  width: 100%;
 }
 
 .closed-filter-summary {
@@ -37,7 +37,7 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  width: min(980px, 100%);
+  width: 100%;
   padding: 6px 8px;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
@@ -89,7 +89,7 @@
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   background: rgba(9, 15, 24, 0.88);
-  width: min(980px, 100%);
+  width: 100%;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 157, 30, 0.35) rgba(255, 255, 255, 0.03);
 }
@@ -117,7 +117,7 @@
 .closed-table {
   width: auto;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 1240px;
 }
 
 .closed-table thead th {
@@ -191,11 +191,13 @@
   font-size: 0.68rem;
 }
 
+.closed-table td.closed-pnl-positive,
 .closed-pnl-positive {
   color: var(--positive);
   font-weight: 700;
 }
 
+.closed-table td.closed-pnl-negative,
 .closed-pnl-negative {
   color: var(--negative);
   font-weight: 700;
@@ -222,6 +224,28 @@
   overflow: auto;
   margin-top: 3vh;
   padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 157, 30, 0.38) rgba(255, 255, 255, 0.03);
+}
+
+.closed-modal::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.closed-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+}
+
+.closed-modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 157, 30, 0.38), rgba(39, 193, 184, 0.28));
+  border-radius: 999px;
+  border: 2px solid rgba(9, 15, 24, 0.88);
+}
+
+.closed-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 157, 30, 0.52), rgba(39, 193, 184, 0.4));
 }
 
 .closed-modal-body {
@@ -291,6 +315,14 @@
 
 .closed-inline-meta strong {
   color: var(--text-primary);
+}
+
+.closed-inline-meta .is-positive strong {
+  color: var(--positive);
+}
+
+.closed-inline-meta .is-negative strong {
+  color: var(--negative);
 }
 
 .closed-trade-section,

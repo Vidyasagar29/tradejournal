@@ -392,6 +392,14 @@
   color: var(--negative);
 }
 
+.value-positive {
+  color: var(--positive) !important;
+}
+
+.value-negative {
+  color: var(--negative) !important;
+}
+
 .auth-layout {
   width: min(100%, 520px);
 }

@@ -22,8 +22,7 @@ export function createStrategiesView() {
       <th>Open</th>
       <th>Closed</th>
       <th>Remaining</th>
-      <th>Open Value</th>
-      <th>Last Trade</th>
+      <th>Total Profit</th>
       <th>View</th>
     </tr>
   `;
@@ -45,7 +44,7 @@ export function createStrategiesView() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load strategies.";
       setStatus(statusBanner, message, "error");
-      tableBody.innerHTML = `<tr><td colspan="9" class="positions-empty">${escapeHtml(message)}</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="8" class="positions-empty">${escapeHtml(message)}</td></tr>`;
     }
   }
 }
@@ -84,7 +83,7 @@ function renderTable(strategies, tableBody, modal) {
   tableBody.innerHTML = "";
 
   if (strategies.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="9" class="positions-empty">No strategies found.</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="8" class="positions-empty">No strategies found.</td></tr>`;
     return;
   }
 
@@ -100,8 +99,7 @@ function renderTable(strategies, tableBody, modal) {
       <td>${strategy.openCount}</td>
       <td>${strategy.closedCount}</td>
       <td>${strategy.remainingQty}</td>
-      <td>${formatNumber(strategy.openValue)}</td>
-      <td>${escapeHtml(strategy.lastTradeDate)}</td>
+      <td class="${strategy.totalProfitMade >= 0 ? "strategies-pnl-positive" : "strategies-pnl-negative"}">${formatSigned(strategy.totalProfitMade)}</td>
     `;
 
     button.type = "button";
@@ -212,6 +210,12 @@ function setStatus(element, message, tone) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(Number(value) || 0);
+}
+
+function formatSigned(value) {
+  const amount = Number(value) || 0;
+  const sign = amount > 0 ? "+" : "";
+  return `${sign}${formatNumber(amount)}`;
 }
 
 function escapeHtml(value) {

@@ -150,17 +150,20 @@ function renderMetrics(container, metrics) {
   [
     ["Ending Capital", `Rs. ${formatNumber(metrics.endingCapital)}`, "Tracked capital after realized P&L."],
     ["Open Notional", `Rs. ${formatNumber(metrics.openNotional)}`, "Entry-value exposure still active in the book."],
-    ["Realized P&L", formatSigned(metrics.realizedPnl), "Closed-trade performance recognized so far."],
+    ["Realized P&L", formatSigned(metrics.realizedPnl), "Closed-trade performance recognized so far.", metrics.realizedPnl >= 0 ? "value-positive" : "value-negative"],
     ["Portfolio Delta", formatSigned(metrics.portfolioDelta), "Single-unit delta from the active risk book."],
     ["Portfolio Theta", formatSigned(metrics.portfolioTheta), "Single-unit theta from live open positions."],
     ["Win Rate", `${metrics.winRate.toFixed(1)}%`, "Closed-trade hit rate."],
     ["Max Drawdown", `${metrics.maxDrawdown.toFixed(2)}%`, "Worst realized capital drawdown."],
     ["Open Strategies", String(metrics.openStrategies), "Strategies that still have active legs."]
-  ].forEach(([title, value, note]) => {
+  ].forEach(([title, value, note, valueClass = ""]) => {
     const card = createElement("article", "metric-card");
     const metricTitle = createElement("h3", "", title);
     const strong = createElement("strong", "", value);
     const paragraph = createElement("p", "", note);
+    if (valueClass) {
+      strong.classList.add(valueClass);
+    }
     card.append(metricTitle, strong, paragraph);
     container.appendChild(card);
   });

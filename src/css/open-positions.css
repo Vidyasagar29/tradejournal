@@ -9,15 +9,15 @@
   display: grid;
   gap: 8px;
   padding: 10px;
-  width: min(980px, 100%);
-  justify-items: start;
+  width: 100%;
+  justify-items: stretch;
 }
 
 .positions-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  width: min(980px, 100%);
+  width: 100%;
 }
 
 .positions-stat-card {
@@ -37,13 +37,13 @@
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   background: rgba(9, 15, 24, 0.88);
-  width: min(980px, 100%);
+  width: 100%;
 }
 
 .positions-table {
   width: auto;
   border-collapse: collapse;
-  min-width: 780px;
+  min-width: 1100px;
 }
 
 .positions-table thead th {
@@ -135,6 +135,14 @@
 .positions-pnl-negative {
   color: var(--negative);
   font-weight: 700;
+}
+
+.positions-stat-card .value-positive {
+  color: var(--positive) !important;
+}
+
+.positions-stat-card .value-negative {
+  color: var(--negative) !important;
 }
 
 .positions-empty {

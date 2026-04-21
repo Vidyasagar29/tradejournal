@@ -1,5 +1,8 @@
 import { createElement } from "../../core/dom.js";
 
+let activeDebugPanel = null;
+let debugListenerAttached = false;
+
 export function createAuthView({ onSubmit, isConfigured }) {
   const wrapper = createElement("section", "auth-layout");
   const card = createElement("article", "panel-card auth-card");
@@ -15,6 +18,7 @@ export function createAuthView({ onSubmit, isConfigured }) {
       ? "Supabase Auth is ready. Enter your email and password."
       : "Supabase config is missing. Update src/js/config/app-config.js before signing in."
   );
+  const debugPanel = createElement("pre", "auth-debug-log");
   const form = document.createElement("form");
   const grid = createElement("div", "trade-form-grid");
   const actions = createElement("div", "trade-form-actions");
@@ -34,6 +38,7 @@ export function createAuthView({ onSubmit, isConfigured }) {
   });
   const passwordToggle = createElement("button", "button-secondary auth-password-toggle", "Show");
   const submitButton = createElement("button", "button-primary", "Sign In");
+  const debug = createDebugLogger(debugPanel);
 
   form.className = "trade-entry-form auth-form";
   form.noValidate = true;
@@ -48,36 +53,50 @@ export function createAuthView({ onSubmit, isConfigured }) {
   grid.append(emailField.wrapper, passwordField.wrapper);
   actions.appendChild(submitButton);
   form.append(grid, actions);
-  card.append(brand, statusBanner, form);
+  card.append(brand, statusBanner, form, debugPanel);
   wrapper.appendChild(card);
+
+  syncExternalDebug(debugPanel);
+  debug("Auth view ready");
+  debug(`Supabase configured: ${isConfigured ? "yes" : "no"}`);
 
   passwordToggle.addEventListener("click", () => {
     const shouldShowPassword = passwordField.input.type === "password";
     passwordField.input.type = shouldShowPassword ? "text" : "password";
     passwordToggle.textContent = shouldShowPassword ? "Hide" : "Show";
+    debug(`Password visibility changed: ${shouldShowPassword ? "shown" : "hidden"}`);
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    debug("Submit clicked");
 
     if (!isConfigured) {
+      debug("Blocked: Supabase config missing");
       return;
     }
 
     submitButton.disabled = true;
     statusBanner.textContent = "Signing in...";
     statusBanner.className = "trade-status-banner is-info";
+    debug(`Submitting email: ${emailField.input.value.trim() || "(empty)"}`);
 
     const result = await onSubmit({
       email: emailField.input.value.trim(),
       password: passwordField.input.value
     });
 
+    debug(`Submit result: ${result.ok ? "ok" : "error"}`);
+
     if (!result.ok) {
+      debug(`Error message: ${result.message}`);
       statusBanner.textContent = result.message;
       statusBanner.className = "trade-status-banner is-error";
       submitButton.disabled = false;
+      return;
     }
+
+    debug("Waiting for app transition after successful sign-in");
   });
 
   return wrapper;
@@ -96,4 +115,49 @@ function createField({ label, name, type, placeholder = "", required = false }) 
 
   wrapper.append(labelText, input);
   return { wrapper, input };
+}
+
+function createDebugLogger(panel) {
+  return (message) => {
+    pushDebugLine(message);
+    if (activeDebugPanel === panel) {
+      renderDebugPanel(panel, window.__TRADE_JOURNAL_AUTH_DEBUG__);
+    }
+  };
+}
+
+function syncExternalDebug(panel) {
+  activeDebugPanel = panel;
+  renderDebugPanel(panel, window.__TRADE_JOURNAL_AUTH_DEBUG__);
+
+  if (debugListenerAttached) {
+    return;
+  }
+
+  window.addEventListener("trade-journal-auth-debug", (event) => {
+    if (!activeDebugPanel) {
+      return;
+    }
+
+    renderDebugPanel(activeDebugPanel, event.detail);
+  });
+  debugListenerAttached = true;
+}
+
+function pushDebugLine(message) {
+  const history = window.__TRADE_JOURNAL_AUTH_DEBUG__ || [];
+  const timestamp = new Date().toLocaleTimeString("en-IN", {
+    hour12: false
+  });
+  history.push(`[${timestamp}] ${message}`);
+  window.__TRADE_JOURNAL_AUTH_DEBUG__ = history.slice(-40);
+}
+
+function renderDebugPanel(panel, lines) {
+  if (!Array.isArray(lines) || !lines.length) {
+    panel.textContent = "Debug trace will appear here.";
+    return;
+  }
+
+  panel.textContent = lines.join("\n");
 }

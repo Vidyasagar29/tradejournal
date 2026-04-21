@@ -12,31 +12,10 @@ export function createEquityCurveView() {
   const capitalCard = createChartCard("Capital Curve");
   const benchmarkCard = createChartCard("Portfolio vs NIFTY (Indexed)");
   const pnlCard = createChartCard("Realized Daily P&L");
-  const tableCard = createElement("section", "analytics-table-card");
-  const tableTitle = createElement("h3", "", "Latest Closed Trades");
-  const tableWrap = createElement("div", "analytics-table-wrap");
-  const table = document.createElement("table");
-  const tableBody = document.createElement("tbody");
   const benchmarkNote = createElement("p", "analytics-benchmark-note");
-
-  table.className = "analytics-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Exit</th>
-        <th>Strategy</th>
-        <th>Symbol</th>
-        <th>Side</th>
-        <th>P&L</th>
-      </tr>
-    </thead>
-  `;
-  table.appendChild(tableBody);
-  tableWrap.appendChild(table);
-  tableCard.append(tableTitle, tableWrap);
   benchmarkCard.card.appendChild(benchmarkNote);
   chartGrid.append(capitalCard.card, benchmarkCard.card, pnlCard.card);
-  card.append(header, statusBanner, summaryGrid, chartGrid, tableCard);
+  card.append(header, statusBanner, summaryGrid, chartGrid);
   wrapper.appendChild(card);
 
   loadSnapshot();
@@ -47,7 +26,6 @@ export function createEquityCurveView() {
       const snapshot = await summarizePortfolio();
       const benchmarkSnapshot = await loadNiftyBenchmarkSnapshot(snapshot.equityCurve);
       renderSummary(summaryGrid, snapshot.tradeSummary, benchmarkSnapshot.summary);
-      renderClosedTable(tableBody, snapshot.recentClosedTrades);
       renderCapitalChart(capitalCard.canvas, snapshot.equityCurve);
       renderBenchmarkChart(benchmarkCard.canvas, benchmarkSnapshot.comparison);
       renderDailyPnlChart(pnlCard.canvas, snapshot.equityCurve);
@@ -61,7 +39,6 @@ export function createEquityCurveView() {
       const message = error instanceof Error ? error.message : "Unable to load equity curve analytics.";
       statusBanner.textContent = message;
       statusBanner.className = "trade-status-banner is-error";
-      tableBody.innerHTML = `<tr><td colspan="5" class="positions-empty">${escapeHtml(message)}</td></tr>`;
     }
   }
 }
@@ -86,6 +63,11 @@ function createChartCard(titleText) {
 }
 
 function renderSummary(container, summary, benchmarkSummary) {
+  const realizedPnlClass = summary.totalRealizedPnl >= 0 ? "value-positive" : "value-negative";
+  const portfolioReturnClass = benchmarkSummary.portfolioReturnPercent >= 0 ? "value-positive" : "value-negative";
+  const benchmarkReturnClass = benchmarkSummary.benchmarkReturnPercent >= 0 ? "value-positive" : "value-negative";
+  const relativePerformanceClass = benchmarkSummary.relativePerformancePercent >= 0 ? "value-positive" : "value-negative";
+
   container.innerHTML = `
     <article class="trade-summary-block analytics-stat-card">
       <span>Ending Capital</span>
@@ -93,7 +75,7 @@ function renderSummary(container, summary, benchmarkSummary) {
     </article>
     <article class="trade-summary-block analytics-stat-card">
       <span>Realized P&L</span>
-      <strong>${formatSigned(summary.totalRealizedPnl)}</strong>
+      <strong class="${realizedPnlClass}">${formatSigned(summary.totalRealizedPnl)}</strong>
     </article>
     <article class="trade-summary-block analytics-stat-card">
       <span>Closed Trades</span>
@@ -105,38 +87,17 @@ function renderSummary(container, summary, benchmarkSummary) {
     </article>
     <article class="trade-summary-block analytics-stat-card">
       <span>Portfolio Return</span>
-      <strong>${formatPercent(benchmarkSummary.portfolioReturnPercent)}</strong>
+      <strong class="${portfolioReturnClass}">${formatPercent(benchmarkSummary.portfolioReturnPercent)}</strong>
     </article>
     <article class="trade-summary-block analytics-stat-card">
       <span>NIFTY Return</span>
-      <strong>${formatPercent(benchmarkSummary.benchmarkReturnPercent)}</strong>
+      <strong class="${benchmarkReturnClass}">${formatPercent(benchmarkSummary.benchmarkReturnPercent)}</strong>
     </article>
     <article class="trade-summary-block analytics-stat-card">
       <span>Vs NIFTY</span>
-      <strong>${formatPercent(benchmarkSummary.relativePerformancePercent)}</strong>
+      <strong class="${relativePerformanceClass}">${formatPercent(benchmarkSummary.relativePerformancePercent)}</strong>
     </article>
   `;
-}
-
-function renderClosedTable(tableBody, trades) {
-  tableBody.innerHTML = "";
-
-  if (trades.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="5" class="positions-empty">No closed trades yet.</td></tr>`;
-    return;
-  }
-
-  trades.slice(0, 8).forEach((trade) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${escapeHtml(trade.lastExitDate)}</td>
-      <td>${escapeHtml(trade.strategyName)}</td>
-      <td>${escapeHtml(trade.symbol)}</td>
-      <td>${escapeHtml(trade.action)}</td>
-      <td class="${trade.realizedPnl >= 0 ? "analytics-positive" : "analytics-negative"}">${formatSigned(trade.realizedPnl)}</td>
-    `;
-    tableBody.appendChild(row);
-  });
 }
 
 function renderCapitalChart(canvas, points) {
@@ -300,15 +261,6 @@ function formatPercent(value) {
   const amount = Number(value) || 0;
   const sign = amount > 0 ? "+" : "";
   return `${sign}${amount.toFixed(2)}%`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function formatTrackingSource(source) {
