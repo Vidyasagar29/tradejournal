@@ -402,6 +402,15 @@
   padding: 18px;
 }
 
+.auth-form .trade-form-grid {
+  grid-template-columns: 1fr;
+}
+
+.auth-form .trade-field input {
+  min-height: 42px;
+  font-size: 0.96rem;
+}
+
 .auth-brand {
   display: flex;
   align-items: center;

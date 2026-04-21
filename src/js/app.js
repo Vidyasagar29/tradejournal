@@ -12,7 +12,7 @@ import {
 import { isSupabaseConfigured } from "./data/supabase-client.js";
 
 const store = createStore({
-  activeRoute: "dashboard",
+  activeRoute: "trade-entry",
   authSession: null
 });
 
@@ -38,14 +38,55 @@ const router = createRouter({
 });
 
 let authInitialized = false;
+let routerStarted = false;
 
 store.subscribe((nextState) => {
   if (nextState.authSession) {
     shell.showApp(nextState.authSession);
+
+    if (!routerStarted) {
+      if (!window.location.hash) {
+        window.location.hash = nextState.activeRoute || "trade-entry";
+      }
+
+      router.start();
+      routerStarted = true;
+    } else {
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
+
     return;
   }
 
-  shell.showAuth(createAuthView({
+  shell.showAuth(buildAuthView());
+});
+
+initializeApp();
+
+async function initializeApp() {
+  if (!authInitialized) {
+    subscribeToAuthChanges((session) => {
+      store.setState({ authSession: session });
+    });
+    authInitialized = true;
+  }
+
+  shell.showAuth(buildAuthView());
+
+  try {
+    const session = await getCurrentSession();
+    store.setState({ authSession: session });
+  } catch (error) {
+    shell.showAuth(buildAuthView());
+
+    if (error instanceof Error) {
+      console.error("Auth bootstrap failed:", error.message);
+    }
+  }
+}
+
+function buildAuthView() {
+  return createAuthView({
     isConfigured: isSupabaseConfigured(),
     onSubmit: async (credentials) => {
       try {
@@ -58,41 +99,5 @@ store.subscribe((nextState) => {
         };
       }
     }
-  }));
-});
-
-initializeApp();
-
-async function initializeApp() {
-  if (!authInitialized) {
-    router.start();
-    subscribeToAuthChanges((session) => {
-      store.setState({ authSession: session });
-    });
-    authInitialized = true;
-  }
-
-  try {
-    const session = await getCurrentSession();
-    store.setState({ authSession: session });
-  } catch (error) {
-    shell.showAuth(createAuthView({
-      isConfigured: isSupabaseConfigured(),
-      onSubmit: async (credentials) => {
-        try {
-          await signInWithPassword(credentials);
-          return { ok: true };
-        } catch (signInError) {
-          return {
-            ok: false,
-            message: signInError instanceof Error ? signInError.message : "Unable to sign in."
-          };
-        }
-      }
-    }));
-
-    if (error instanceof Error) {
-      console.error("Auth bootstrap failed:", error.message);
-    }
-  }
+  });
 }
