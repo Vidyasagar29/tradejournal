@@ -3,7 +3,7 @@ window.TRADE_JOURNAL_CONFIG = window.TRADE_JOURNAL_CONFIG || {
   supabaseAnonKey: "sb_publishable_hK5-s-79O8OjTUSCZQ0rhg__fIcLUJ0",
   connectionTestTable: "portfolio",
   googleSheets: {
-    marketDataCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTnIOO5bf63lwYdCX1ZsPa32o0AekCFfrOoXdq1jVH7j7JD8Jg5PjO7EtqF5ISTk2MZQIGDfXPR8MoJ/pub?gid=775524360&single=true&output=csv",
+    marketDataCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTT0QXf8Hekn8p7M3HPoBhv_l_35bl781r7xHFAjnAXw3SgLwpCtuj9Uwa8UUYoz4KNfj7C2iE_ITK2/pub?gid=0&single=true&output=csv",
     benchmarkCsvUrl: "",
     columns: {
       symbol: "symbol",

@@ -1,9 +1,14 @@
 const INITIAL_CAPITAL = 1000000;
 const DEFAULT_IV = 18;
+const DEFAULT_MARKET_DATA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTT0QXf8Hekn8p7M3HPoBhv_l_35bl781r7xHFAjnAXw3SgLwpCtuj9Uwa8UUYoz4KNfj7C2iE_ITK2/pub?gid=0&single=true&output=csv";
 const DEFAULT_MARKET_CLOSE_UTC_HOUR = 10;
 const DEFAULT_MARKET_CLOSE_UTC_MINUTE = 5;
 const DEFAULT_MARKET_TIMEZONE = "Asia/Kolkata";
 const SNAPSHOT_TOLERANCE = 0.01;
+const SYMBOL_SPOT_ALIASES = new Map([
+  ["NIFTY", "NIFTY_50"],
+  ["MIDCPNIFTY", "NIFTYMIDSELECT"]
+]);
 const PORTFOLIO_COLUMN_MAP = {
   id: "id",
   date: "date",
@@ -77,7 +82,7 @@ function getConfig() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const marketDataCsvUrl = process.env.MARKET_DATA_CSV_URL?.trim()
-    || "https://docs.google.com/spreadsheets/d/e/2PACX-1vTnIOO5bf63lwYdCX1ZsPa32o0AekCFfrOoXdq1jVH7j7JD8Jg5PjO7EtqF5ISTk2MZQIGDfXPR8MoJ/pub?gid=775524360&single=true&output=csv";
+    || DEFAULT_MARKET_DATA_CSV_URL;
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured as GitHub Actions secrets.");
@@ -185,9 +190,10 @@ function valueOpenTrade(trade, marketSheet, config) {
 
 function resolveSpotPrice(trade, marketSheet) {
   const symbolKey = normalizeValue(trade.symbol);
+  const namedSpot = toNumeric(marketSheet.namedCells.get(symbolKey));
 
-  if (symbolKey === "NIFTY") {
-    return toNumeric(marketSheet.namedCells.get("NIFTY_50"));
+  if (namedSpot > 0) {
+    return namedSpot;
   }
 
   const matchedRow = findExactMarketRow(trade, marketSheet.rows);
@@ -302,11 +308,7 @@ async function loadMarketSheet(csvUrl) {
   const csvText = await response.text();
   const parsedRows = parseCsvRows(csvText);
   const records = buildCsvRecords(parsedRows);
-  const namedCells = new Map([
-    ["NIFTY_50", resolveNamedCellValue(parsedRows, "Nifty_50")],
-    ["PUT_IV", resolveNamedCellValue(parsedRows, "PUT_IV")],
-    ["CALL_IV", resolveNamedCellValue(parsedRows, "CALL_IV")]
-  ]);
+  const namedCells = buildNamedMarketCells(parsedRows);
 
   return {
     rows: records.map((row) => ({
@@ -319,6 +321,40 @@ async function loadMarketSheet(csvUrl) {
     })),
     namedCells
   };
+}
+
+function buildNamedMarketCells(rows) {
+  const namedCells = new Map([
+    ["NIFTY_50", resolveNamedCellValue(rows, "Nifty_50")],
+    ["PUT_IV", resolveNamedCellValue(rows, "PUT_IV")],
+    ["CALL_IV", resolveNamedCellValue(rows, "CALL_IV")]
+  ]);
+
+  rows.forEach((row) => {
+    setNamedMarketCell(namedCells, row[0], row[1]);
+    setNamedMarketCell(namedCells, row[3], row[4]);
+  });
+
+  applySymbolSpotAliases(namedCells);
+  return namedCells;
+}
+
+function setNamedMarketCell(namedCells, label, value) {
+  const normalizedLabel = normalizeValue(label);
+
+  if (normalizedLabel && value != null && String(value).trim() !== "") {
+    namedCells.set(normalizedLabel, String(value).trim());
+  }
+}
+
+function applySymbolSpotAliases(namedCells) {
+  SYMBOL_SPOT_ALIASES.forEach((sourceSymbol, aliasSymbol) => {
+    const sourceSpot = namedCells.get(sourceSymbol);
+
+    if (sourceSpot != null && !namedCells.has(aliasSymbol)) {
+      namedCells.set(aliasSymbol, sourceSpot);
+    }
+  });
 }
 
 function resolveLatestRealizedCapital(rows, columnMap, snapshotDate) {

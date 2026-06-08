@@ -3,6 +3,10 @@ import { normalizeTradingDate } from "../core/date-utils.js";
 
 const database = createDatabase();
 const DEFAULT_IV = 18;
+const SYMBOL_SPOT_ALIASES = new Map([
+  ["NIFTY", "NIFTY_50"],
+  ["MIDCPNIFTY", "NIFTYMIDSELECT"]
+]);
 const sheetSymbolSpotCache = new Map();
 const sheetCurrentPriceIvCache = new Map();
 
@@ -92,15 +96,22 @@ marketDataService.loadGoogleSheetMarketData = async function loadGoogleSheetMark
     const niftySpotLabel = window.TRADE_JOURNAL_CONFIG?.googleSheets?.columns?.niftySpot || "Nifty_50";
     const putIvLabel = window.TRADE_JOURNAL_CONFIG?.googleSheets?.columns?.putIv || "PUT_IV";
     const callIvLabel = window.TRADE_JOURNAL_CONFIG?.googleSheets?.columns?.callIv || "CALL_IV";
+    const compactSymbolSpots = buildCompactSymbolSpotMap(parsedRows);
     const dedicatedNiftySpot = resolveNamedCellValue(parsedRows, niftySpotLabel);
     const dedicatedPutIv = resolveNamedCellValue(parsedRows, putIvLabel);
     const dedicatedCallIv = resolveNamedCellValue(parsedRows, callIvLabel);
     sheetSymbolSpotCache.clear();
     sheetCurrentPriceIvCache.clear();
 
+    compactSymbolSpots.forEach((spot, symbol) => {
+      sheetSymbolSpotCache.set(symbol, spot);
+    });
+
     if (dedicatedNiftySpot) {
-      sheetSymbolSpotCache.set("NIFTY", dedicatedNiftySpot);
+      sheetSymbolSpotCache.set(normalizeValue(niftySpotLabel), dedicatedNiftySpot);
     }
+
+    applySymbolSpotAliases(sheetSymbolSpotCache);
 
     if (dedicatedPutIv) {
       sheetCurrentPriceIvCache.set("PE", dedicatedPutIv);
@@ -194,6 +205,29 @@ function buildSymbolSpotMap(rows) {
   });
 
   return spotMap;
+}
+
+function buildCompactSymbolSpotMap(rows) {
+  return rows.reduce((spotMap, row) => {
+    const symbol = normalizeValue(row[0]);
+    const spot = pickFirstNumber([row[1]]);
+
+    if (symbol && spot != null) {
+      spotMap.set(symbol, spot);
+    }
+
+    return spotMap;
+  }, new Map());
+}
+
+function applySymbolSpotAliases(spotMap) {
+  SYMBOL_SPOT_ALIASES.forEach((sourceSymbol, aliasSymbol) => {
+    const sourceSpot = spotMap.get(sourceSymbol);
+
+    if (sourceSpot != null && !spotMap.has(aliasSymbol)) {
+      spotMap.set(aliasSymbol, sourceSpot);
+    }
+  });
 }
 
 function buildCurrentPriceIvMap() {
