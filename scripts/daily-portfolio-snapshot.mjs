@@ -6,8 +6,16 @@ const DEFAULT_MARKET_CLOSE_UTC_MINUTE = 5;
 const DEFAULT_MARKET_TIMEZONE = "Asia/Kolkata";
 const SNAPSHOT_TOLERANCE = 0.01;
 const SYMBOL_SPOT_ALIASES = new Map([
-  ["NIFTY", "NIFTY_50"],
-  ["MIDCPNIFTY", "NIFTYMIDSELECT"]
+  ["NIFTY", "NIFTY50"],
+  ["NIFTY50", "NIFTY50"],
+  ["MIDCPNIFTY", "NIFTYMIDSELECT"],
+  ["MIDCAPNIFTY", "NIFTYMIDSELECT"],
+  ["MIDCAPNIFTYINDEX", "NIFTYMIDSELECT"],
+  ["NIFTYMIDCAP", "NIFTYMIDSELECT"],
+  ["NIFTYMIDSELECT", "NIFTYMIDSELECT"],
+  ["SENSEX", "SENSEX"],
+  ["BSESENSEX", "SENSEX"],
+  ["SENSEXINDEX", "SENSEX"]
 ]);
 const PORTFOLIO_COLUMN_MAP = {
   id: "id",
@@ -189,8 +197,7 @@ function valueOpenTrade(trade, marketSheet, config) {
 }
 
 function resolveSpotPrice(trade, marketSheet) {
-  const symbolKey = normalizeValue(trade.symbol);
-  const namedSpot = toNumeric(marketSheet.namedCells.get(symbolKey));
+  const namedSpot = toNumeric(resolveNamedMarketCell(marketSheet.namedCells, trade.symbol));
 
   if (namedSpot > 0) {
     return namedSpot;
@@ -341,20 +348,36 @@ function buildNamedMarketCells(rows) {
 
 function setNamedMarketCell(namedCells, label, value) {
   const normalizedLabel = normalizeValue(label);
+  const compactLabel = normalizeSymbolKey(label);
 
   if (normalizedLabel && value != null && String(value).trim() !== "") {
     namedCells.set(normalizedLabel, String(value).trim());
+  }
+
+  if (compactLabel && value != null && String(value).trim() !== "") {
+    namedCells.set(compactLabel, String(value).trim());
   }
 }
 
 function applySymbolSpotAliases(namedCells) {
   SYMBOL_SPOT_ALIASES.forEach((sourceSymbol, aliasSymbol) => {
-    const sourceSpot = namedCells.get(sourceSymbol);
+    const sourceSpot = resolveNamedMarketCell(namedCells, sourceSymbol);
 
-    if (sourceSpot != null && !namedCells.has(aliasSymbol)) {
-      namedCells.set(aliasSymbol, sourceSpot);
+    if (sourceSpot != null && resolveNamedMarketCell(namedCells, aliasSymbol) == null) {
+      setNamedMarketCell(namedCells, aliasSymbol, sourceSpot);
     }
   });
+}
+
+function resolveNamedMarketCell(namedCells, label) {
+  const normalizedLabel = normalizeValue(label);
+  const compactLabel = normalizeSymbolKey(label);
+
+  return namedCells.get(normalizedLabel)
+    ?? namedCells.get(compactLabel)
+    ?? namedCells.get(SYMBOL_SPOT_ALIASES.get(compactLabel))
+    ?? namedCells.get(SYMBOL_SPOT_ALIASES.get(normalizedLabel))
+    ?? null;
 }
 
 function resolveLatestRealizedCapital(rows, columnMap, snapshotDate) {
@@ -666,6 +689,10 @@ function normalizeHeader(value) {
 
 function normalizeValue(value) {
   return String(value ?? "").trim().toUpperCase();
+}
+
+function normalizeSymbolKey(value) {
+  return normalizeValue(value).replaceAll(/[^A-Z0-9]/g, "");
 }
 
 function toNumeric(value) {

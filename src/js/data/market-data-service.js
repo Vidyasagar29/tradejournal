@@ -4,8 +4,16 @@ import { normalizeTradingDate } from "../core/date-utils.js";
 const database = createDatabase();
 const DEFAULT_IV = 18;
 const SYMBOL_SPOT_ALIASES = new Map([
-  ["NIFTY", "NIFTY_50"],
-  ["MIDCPNIFTY", "NIFTYMIDSELECT"]
+  ["NIFTY", "NIFTY50"],
+  ["NIFTY50", "NIFTY50"],
+  ["MIDCPNIFTY", "NIFTYMIDSELECT"],
+  ["MIDCAPNIFTY", "NIFTYMIDSELECT"],
+  ["MIDCAPNIFTYINDEX", "NIFTYMIDSELECT"],
+  ["NIFTYMIDCAP", "NIFTYMIDSELECT"],
+  ["NIFTYMIDSELECT", "NIFTYMIDSELECT"],
+  ["SENSEX", "SENSEX"],
+  ["BSESENSEX", "SENSEX"],
+  ["SENSEXINDEX", "SENSEX"]
 ]);
 const sheetSymbolSpotCache = new Map();
 const sheetCurrentPriceIvCache = new Map();
@@ -63,7 +71,7 @@ export const marketDataService = {
       marketRow?.spot,
       marketRow?.spot_price,
       marketRow?.underlying_price,
-      context.symbolSpots?.get(normalizeValue(position.symbol))
+      resolveSymbolSpot(position.symbol, context.symbolSpots)
     ]);
 
     return {
@@ -104,11 +112,11 @@ marketDataService.loadGoogleSheetMarketData = async function loadGoogleSheetMark
     sheetCurrentPriceIvCache.clear();
 
     compactSymbolSpots.forEach((spot, symbol) => {
-      sheetSymbolSpotCache.set(symbol, spot);
+      setSymbolSpot(sheetSymbolSpotCache, symbol, spot);
     });
 
     if (dedicatedNiftySpot) {
-      sheetSymbolSpotCache.set(normalizeValue(niftySpotLabel), dedicatedNiftySpot);
+      setSymbolSpot(sheetSymbolSpotCache, niftySpotLabel, dedicatedNiftySpot);
     }
 
     applySymbolSpotAliases(sheetSymbolSpotCache);
@@ -200,7 +208,7 @@ function buildSymbolSpotMap(rows) {
     ]);
 
     if (symbol && spot != null && !spotMap.has(symbol)) {
-      spotMap.set(symbol, spot);
+      setSymbolSpot(spotMap, symbol, spot);
     }
   });
 
@@ -213,7 +221,7 @@ function buildCompactSymbolSpotMap(rows) {
     const spot = pickFirstNumber([row[1]]);
 
     if (symbol && spot != null) {
-      spotMap.set(symbol, spot);
+      setSymbolSpot(spotMap, symbol, spot);
     }
 
     return spotMap;
@@ -222,12 +230,40 @@ function buildCompactSymbolSpotMap(rows) {
 
 function applySymbolSpotAliases(spotMap) {
   SYMBOL_SPOT_ALIASES.forEach((sourceSymbol, aliasSymbol) => {
-    const sourceSpot = spotMap.get(sourceSymbol);
+    const sourceSpot = resolveSymbolSpot(sourceSymbol, spotMap);
 
-    if (sourceSpot != null && !spotMap.has(aliasSymbol)) {
-      spotMap.set(aliasSymbol, sourceSpot);
+    if (sourceSpot != null && resolveSymbolSpot(aliasSymbol, spotMap) == null) {
+      setSymbolSpot(spotMap, aliasSymbol, sourceSpot);
     }
   });
+}
+
+function setSymbolSpot(spotMap, symbol, spot) {
+  const normalizedSymbol = normalizeValue(symbol);
+  const compactSymbol = normalizeSymbolKey(symbol);
+
+  if (normalizedSymbol && !spotMap.has(normalizedSymbol)) {
+    spotMap.set(normalizedSymbol, spot);
+  }
+
+  if (compactSymbol && !spotMap.has(compactSymbol)) {
+    spotMap.set(compactSymbol, spot);
+  }
+}
+
+function resolveSymbolSpot(symbol, spotMap) {
+  if (!spotMap) {
+    return null;
+  }
+
+  const normalizedSymbol = normalizeValue(symbol);
+  const compactSymbol = normalizeSymbolKey(symbol);
+
+  return spotMap.get(normalizedSymbol)
+    ?? spotMap.get(compactSymbol)
+    ?? spotMap.get(SYMBOL_SPOT_ALIASES.get(compactSymbol))
+    ?? spotMap.get(SYMBOL_SPOT_ALIASES.get(normalizedSymbol))
+    ?? null;
 }
 
 function buildCurrentPriceIvMap() {
@@ -257,6 +293,10 @@ function pickFirstNumber(values) {
 
 function normalizeValue(value) {
   return String(value ?? "").trim().toUpperCase();
+}
+
+function normalizeSymbolKey(value) {
+  return normalizeValue(value).replaceAll(/[^A-Z0-9]/g, "");
 }
 
 function normalizeDateValue(value) {
